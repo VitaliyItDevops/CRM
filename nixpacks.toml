@@ -1,12 +1,11 @@
 [phases.setup]
-nixPkgs = ["...", "dotnet-sdk_8"]
+nixPkgs = ["...", "dotnet-sdk"]
 
 [phases.build]
 cmds = [
     "cd 'bryx CRM' && dotnet restore 'bryx CRM.csproj'",
-    "cd 'bryx CRM' && dotnet build 'bryx CRM.csproj' -c Release",
-    "cd 'bryx CRM' && dotnet ef database update --project 'bryx CRM.csproj'"
+    "cd 'bryx CRM' && dotnet publish 'bryx CRM.csproj' -c Release -o /app/publish --no-self-contained"
 ]
 
 [start]
-cmd = "cd 'bryx CRM' && dotnet run --project 'bryx CRM.csproj' --no-build -c Release"
+cmd = "cd /app/publish && dotnet bryx_CRM.dll"
