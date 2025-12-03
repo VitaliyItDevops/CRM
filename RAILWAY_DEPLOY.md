@@ -8,13 +8,10 @@ Script start.sh not found. Railpack could not determine how to build the app
 
 ## Решение
 
-Были созданы конфигурационные файлы для деплоя на Railway:
+Был создан конфигурационный файл для деплоя на Railway:
 
-### 1. nixpacks.toml (основной метод)
-Файл настроен для .NET 10.0 с правильными командами сборки и запуска.
-
-### 2. Dockerfile (альтернативный метод)
-Multi-stage Dockerfile для оптимизированной сборки приложения.
+### nixpacks.toml
+Файл настроен для .NET 10.0 (preview) с правильными командами сборки и запуска. Nixpacks лучше поддерживает preview версии .NET, чем Docker образы.
 
 ## Инструкция по деплою на Railway
 
@@ -81,23 +78,16 @@ Program.cs настроен для работы с Railway PostgreSQL через
 connectionString = $"...;SSL Mode=Require;Trust Server Certificate=true";
 ```
 
-## Выбор метода деплоя
+## Метод деплоя
 
-### Метод 1: Nixpacks (рекомендуется)
-Railway автоматически использует `nixpacks.toml` если он есть в корне проекта.
+Railway автоматически использует `nixpacks.toml` который находится в корне проекта.
 
-**Преимущества:**
-- Быстрее
+**Преимущества Nixpacks:**
+- Быстрее чем Docker
 - Меньше потребление ресурсов
+- Лучше поддерживает .NET 10.0 preview
 - Автоматическое определение зависимостей
-
-### Метод 2: Dockerfile
-Если nixpacks не работает, можно использовать Dockerfile.
-
-**Как переключиться:**
-1. В Railway dashboard → Service Settings → Build
-2. Выберите "Docker" вместо "Nixpacks"
-3. Укажите путь к Dockerfile (обычно `/Dockerfile`)
+- Оптимизированные образы
 
 ## Проверка деплоя
 
