@@ -45,7 +45,12 @@ else
     Console.WriteLine($"⚠️ Using local connection string (not Railway format)");
 }
 
-builder.Services.AddPooledDbContextFactory<ApplicationDbContext>(options =>
+// Регистрация DbContext для ASP.NET Core Identity
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// Регистрация DbContextFactory для Blazor компонентов
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // Настройка ASP.NET Core Identity
@@ -86,8 +91,7 @@ using (var scope = app.Services.CreateScope())
 {
     try
     {
-        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
-        using var context = await dbContextFactory.CreateDbContextAsync();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         // Применить все pending миграции
         await context.Database.MigrateAsync();
@@ -96,6 +100,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine($"⚠️ Ошибка при применении миграций: {ex.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
     }
 }
 
