@@ -262,7 +262,8 @@
 
             if (result.Succeeded)
             {
-                NavigationManager.NavigateTo("/", forceLoad: true);
+                // Редирект без forceLoad для избежания NavigationException в .NET 9
+                NavigationManager.NavigateTo("/");
                 return;
             }
             else if (result.IsLockedOut)
