@@ -1,0 +1,1287 @@
+@page "/sales"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using bryx_CRM.Data
+@using bryx_CRM.Data.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@attribute [Authorize]
+
+<PageTitle>Продажи</PageTitle>
+
+<h3>Продажи</h3>
+
+<div class="sales-header">
+    <button class="btn-add-sale" @onclick="ShowAddSaleModal">
+        ➕ Добавить продажу
+    </button>
+</div>
+
+@if (sales == null)
+{
+    <p>Загрузка...</p>
+}
+else if (!sales.Any())
+{
+    <p class="no-sales">Нет оформленных продаж</p>
+}
+else
+{
+    <div class="sales-list">
+        @foreach (var sale in sales)
+        {
+            <div class="sale-card @(expandedSaleId == sale.Id ? "expanded" : "")">
+                <div class="sale-header" @onclick="@(() => ToggleExpand(sale.Id))">
+                    <div class="sale-info">
+                        <h4>@(!string.IsNullOrEmpty(sale.SoldThrough) ? sale.SoldThrough : "Прямая продажа") • @sale.Buyer • @sale.TotalAmount.ToString("N0") ₽</h4>
+                        <div class="sale-details">
+                            <span><strong>Дата:</strong> @sale.SaleDate.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                            <span class="status-badge @GetStatusClass(sale.Status)">@GetStatusText(sale.Status)</span>
+                        </div>
+                    </div>
+                    <div class="expand-icon">
+                        @if (expandedSaleId == sale.Id)
+                        {
+                            <span>▼</span>
+                        }
+                        else
+                        {
+                            <span>▶</span>
+                        }
+                    </div>
+                </div>
+
+                @if (expandedSaleId == sale.Id)
+                {
+                    <div class="sale-content">
+                        <div class="sale-additional-info">
+                            @if (!string.IsNullOrEmpty(sale.TTN))
+                            {
+                                <p><strong>ТТН:</strong> @sale.TTN</p>
+                            }
+                            @if (!string.IsNullOrEmpty(sale.SoldThrough))
+                            {
+                                <p><strong>Продано через:</strong> @sale.SoldThrough</p>
+                            }
+                            @if (!string.IsNullOrEmpty(sale.AdditionalService))
+                            {
+                                <p><strong>Доп. услуги:</strong> @sale.AdditionalService</p>
+                            }
+                        </div>
+
+                        <h5>Товары в продаже:</h5>
+                        <div class="products-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Название</th>
+                                        <th>Цвет</th>
+                                        <th>Категория</th>
+                                        <th>Поставщик</th>
+                                        <th>Цена продажи</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var product in sale.Products)
+                                    {
+                                        <tr>
+                                            <td>@product.Name</td>
+                                            <td>@(product.Color ?? "-")</td>
+                                            <td>@product.Category</td>
+                                            <td>@product.Supplier</td>
+                                            <td>@product.SalePrice.ToString("N0") ₽</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@* Модальное окно добавления продажи *@
+@if (showAddSaleModal)
+{
+    <div class="modal-overlay" @onclick="CloseAddSaleModal">
+        <div class="modal-content large" @onclick:stopPropagation="true">
+            <h4>Оформить продажу</h4>
+
+            <div class="form-section">
+                <h5>Информация о покупателе</h5>
+
+                <div class="form-group">
+                    <label>Покупатель: <span class="required">*</span></label>
+                    <input type="text" @bind="buyer" placeholder="Имя покупателя" class="form-input" />
+                </div>
+
+                <div class="form-group">
+                    <label>Дата продажи: <span class="required">*</span></label>
+                    <input type="date" @bind="saleDate" class="form-input" />
+                </div>
+
+                <div class="form-group">
+                    <label>ТТН (номер накладной):</label>
+                    <input type="text" @bind="ttn" placeholder="Номер ТТН" class="form-input" />
+                </div>
+
+                <div class="form-group">
+                    <label>Продано через:</label>
+                    <input type="text" @bind="soldThrough" placeholder="Например: Интернет-магазин, Розница" class="form-input" />
+                </div>
+
+                <div class="form-group">
+                    <label>Дополнительные услуги:</label>
+                    <textarea @bind="additionalService" placeholder="Например: Доставка, Установка" class="form-textarea" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h5>Товары в продаже</h5>
+
+                @if (showItemSelector)
+                {
+                    <div class="item-selector">
+                        <div class="form-group">
+                            <label>Категория:</label>
+                            <select @bind="selectedCategory" @bind:after="LoadProductNames" class="form-select">
+                                <option value="">-- Выберите категорию --</option>
+                                @foreach (var category in categories)
+                                {
+                                    <option value="@category">@category</option>
+                                }
+                            </select>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(selectedCategory))
+                        {
+                            <div class="form-group">
+                                <label>Товар:</label>
+                                <select @bind="selectedProductName" @bind:after="LoadColorsForProduct" class="form-select">
+                                    <option value="">-- Выберите товар --</option>
+                                    @foreach (var name in availableProductNames)
+                                    {
+                                        <option value="@name">@name</option>
+                                    }
+                                </select>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(selectedProductName) && availableColors.Any())
+                            {
+                                <div class="form-group">
+                                    <label>Цвет:</label>
+                                    <select @bind="selectedColor" class="form-select">
+                                        <option value="">-- Выберите цвет --</option>
+                                        @foreach (var color in availableColors)
+                                        {
+                                            <option value="@color">@color</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+
+                            <div class="item-selector-actions">
+                                <button class="btn-cancel-small" @onclick="CancelItemSelection">Отмена</button>
+                                <button class="btn-add-small" @onclick="AddItemToCart" disabled="@string.IsNullOrEmpty(selectedProductName)">Добавить</button>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <button class="btn-add-item" @onclick="ShowItemSelector">
+                        ➕ Добавить товар
+                    </button>
+                }
+
+                @if (cartItems.Any())
+                {
+                    <div class="cart-items">
+                        @foreach (var item in cartItems)
+                        {
+                            <div class="cart-item">
+                                <div class="cart-item-info">
+                                    <strong>@item.ProductName</strong>
+                                    @if (!string.IsNullOrEmpty(item.Color))
+                                    {
+                                        <span class="cart-item-color">Цвет: @item.Color</span>
+                                    }
+                                    <span class="cart-item-category">@item.Category</span>
+                                </div>
+                                <div class="cart-item-price">
+                                    <label>Цена продажи:</label>
+                                    <input type="number" step="0.01" @bind="item.SalePrice" class="form-input-small" />
+                                    <span>₽</span>
+                                </div>
+                                <button class="btn-remove-item" @onclick="@(() => RemoveItemFromCart(item))">
+                                    ✖
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="cart-total">
+                        <strong>Итого:</strong> @cartItems.Sum(i => i.SalePrice).ToString("N0") ₽
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(saleError))
+            {
+                <div class="error-message">@saleError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseAddSaleModal">Отмена</button>
+                <button class="btn-save" @onclick="CompleteSale" disabled="@(!cartItems.Any())">Продать</button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .sales-header {
+        margin-bottom: 20px;
+    }
+
+    .btn-add-sale {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+        .btn-add-sale:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            transform: scale(1.02);
+        }
+
+    .no-sales {
+        text-align: center;
+        color: #6c757d;
+        padding: 40px;
+        font-style: italic;
+    }
+
+    .sales-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .sale-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+
+        .sale-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .sale-card.expanded {
+            border-color: #667eea;
+        }
+
+    .sale-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+        .sale-header:hover {
+            background: #f8f9fa;
+        }
+
+    .sale-info h4 {
+        margin: 0 0 10px 0;
+        color: #212529;
+        font-size: 18px;
+    }
+
+    .sale-details {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        font-size: 14px;
+        color: #6c757d;
+    }
+
+        .sale-details span {
+            display: flex;
+            align-items: center;
+        }
+
+    .expand-icon {
+        font-size: 20px;
+        color: #667eea;
+        font-weight: bold;
+    }
+
+    .sale-content {
+        padding: 0 20px 20px 20px;
+        border-top: 1px solid #dee2e6;
+        animation: slideDown 0.3s ease;
+    }
+
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .sale-additional-info {
+        padding: 15px 0;
+    }
+
+        .sale-additional-info p {
+            margin: 5px 0;
+            color: #495057;
+            font-size: 14px;
+        }
+
+    .sale-content h5 {
+        margin: 15px 0 10px 0;
+        color: #495057;
+        font-size: 16px;
+    }
+
+    .products-table {
+        overflow-x: auto;
+    }
+
+        .products-table table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .products-table thead {
+            background: #e9ecef;
+        }
+
+        .products-table th {
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            font-size: 13px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .products-table td {
+            padding: 10px;
+            color: #212529;
+            font-size: 14px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .products-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-отправлено {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .status-получено {
+        background: #d1e7dd;
+        color: #0f5132;
+        font-weight: 700;
+    }
+
+    .status-возврат {
+        background: #f8d7da;
+        color: #842029;
+        font-weight: 700;
+    }
+
+    .status-частичный-возврат {
+        background: #fff3cd;
+        color: #664d03;
+        font-weight: 700;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+        .modal-content.large {
+            max-width: 800px;
+        }
+
+        .modal-content h4 {
+            margin: 0 0 20px 0;
+            color: #212529;
+        }
+
+    .form-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+        .form-section h5 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 16px;
+        }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+
+    .required {
+        color: #dc3545;
+    }
+
+    .form-input, .form-select, .form-textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+    .item-selector {
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+    }
+
+    .item-selector-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }
+
+    .btn-add-item {
+        background: #0d6efd;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: background 0.3s ease;
+    }
+
+        .btn-add-item:hover {
+            background: #0b5ed7;
+        }
+
+    .btn-cancel-small, .btn-add-small {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .btn-cancel-small {
+        background: #6c757d;
+        color: white;
+    }
+
+        .btn-cancel-small:hover {
+            background: #5a6268;
+        }
+
+    .btn-add-small {
+        background: #198754;
+        color: white;
+    }
+
+        .btn-add-small:hover {
+            background: #157347;
+        }
+
+        .btn-add-small:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+    .cart-items {
+        margin-top: 15px;
+    }
+
+    .cart-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 12px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+
+    .cart-item-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+        .cart-item-info strong {
+            color: #212529;
+        }
+
+    .cart-item-color {
+        font-size: 12px;
+        color: #9933cc;
+        font-weight: 500;
+    }
+
+    .cart-item-category {
+        font-size: 12px;
+        color: #6c757d;
+    }
+
+    .cart-item-price {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .cart-item-price label {
+            font-size: 13px;
+            color: #495057;
+            margin: 0;
+        }
+
+    .form-input-small {
+        width: 120px;
+        padding: 6px 10px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+
+        .form-input-small:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+    .btn-remove-item {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s ease;
+    }
+
+        .btn-remove-item:hover {
+            background: #bb2d3b;
+        }
+
+    .cart-total {
+        text-align: right;
+        padding: 15px;
+        background: white;
+        border-radius: 5px;
+        margin-top: 10px;
+        font-size: 16px;
+        color: #212529;
+    }
+
+    .error-message {
+        background: #f8d7da;
+        color: #842029;
+        padding: 12px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        border: 1px solid #f5c2c7;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+
+    .btn-cancel, .btn-save {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .btn-cancel {
+        background: #6c757d;
+        color: white;
+    }
+
+        .btn-cancel:hover {
+            background: #5a6268;
+        }
+
+    .btn-save {
+        background: #198754;
+        color: white;
+    }
+
+        .btn-save:hover {
+            background: #157347;
+        }
+
+        .btn-save:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+    /* Адаптация таблиц для скролла */
+    .products-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-top: 10px;
+        border-radius: 5px;
+    }
+
+        .products-table table {
+            min-width: 500px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .products-table table th,
+            .products-table table td {
+                white-space: nowrap;
+                padding: 10px;
+                text-align: left;
+            }
+
+            .products-table table th {
+                background: #f8f9fa;
+                font-weight: 600;
+                border-bottom: 2px solid #dee2e6;
+            }
+
+            .products-table table td {
+                border-bottom: 1px solid #dee2e6;
+            }
+
+    /* Мобильная адаптация */
+    @@media (max-width: 768px) {
+        h3 {
+            font-size: 1.3rem;
+        }
+
+        .btn-add-sale {
+            width: 100%;
+            min-height: 48px;
+            font-size: 15px;
+        }
+
+        .sale-card {
+            padding: 12px;
+        }
+
+        .sale-header h4 {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .sale-details {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .expand-icon {
+            font-size: 18px;
+        }
+
+        /* Модальное окно */
+        .modal-content {
+            width: 95%;
+            padding: 20px;
+            max-height: 90vh;
+        }
+
+            .modal-content.large {
+                max-width: 95%;
+            }
+
+            .modal-content h4 {
+                font-size: 1.2rem;
+            }
+
+        .form-section {
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+            .form-section h5 {
+                font-size: 15px;
+            }
+
+        .form-input, .form-select, .form-textarea {
+            font-size: 16px; /* Предотвращает зум на iOS */
+            padding: 12px;
+            min-height: 44px;
+        }
+
+        .form-textarea {
+            min-height: 80px;
+        }
+
+        .item-selector {
+            padding: 12px;
+        }
+
+        .btn-add-item {
+            width: 100%;
+            min-height: 44px;
+        }
+
+        .item-selector-actions {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn-cancel-small, .btn-add-small {
+            width: 100%;
+            min-height: 44px;
+        }
+
+        .cart-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .cart-item-price {
+            width: 100%;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        .form-input-small {
+            width: 100%;
+        }
+
+        .btn-remove-item {
+            width: 100%;
+            min-height: 40px;
+        }
+
+        .modal-actions {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn-cancel, .btn-save {
+            width: 100%;
+            min-height: 48px;
+        }
+
+        .products-table {
+            position: relative;
+        }
+
+            /* Индикатор скролла */
+            .products-table::after {
+                content: '← Прокрутите →';
+                position: absolute;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(13, 110, 253, 0.9);
+                color: white;
+                padding: 5px 15px;
+                border-radius: 20px;
+                font-size: 11px;
+                font-weight: 600;
+                pointer-events: none;
+                opacity: 0.8;
+            }
+    }
+
+    @@media (max-width: 480px) {
+        h3 {
+            font-size: 1.1rem;
+        }
+
+        .sale-card {
+            padding: 10px;
+        }
+
+        .sale-header h4 {
+            font-size: 0.85rem;
+        }
+
+        .sale-details span {
+            font-size: 12px;
+        }
+
+        .status-badge {
+            font-size: 10px;
+            padding: 3px 6px;
+        }
+
+        .modal-content {
+            padding: 15px;
+        }
+
+            .modal-content h4 {
+                font-size: 1.1rem;
+            }
+
+        .form-section {
+            padding: 12px;
+        }
+
+            .form-section h5 {
+                font-size: 14px;
+            }
+
+        .form-group label {
+            font-size: 13px;
+        }
+
+        .cart-item-info strong {
+            font-size: 14px;
+        }
+
+        .cart-item-color,
+        .cart-item-category {
+            font-size: 11px;
+        }
+
+        .cart-total {
+            font-size: 14px;
+        }
+
+        .products-table table {
+            min-width: 450px;
+        }
+
+            .products-table table th,
+            .products-table table td {
+                padding: 8px 6px;
+                font-size: 12px;
+            }
+    }
+</style>
+
+@code {
+    private List<Sale>? sales = null;
+    private int? expandedSaleId = null;
+
+    // Модальное окно добавления продажи
+    private bool showAddSaleModal = false;
+    private string buyer = "";
+    private DateOnly saleDate = DateOnly.FromDateTime(DateTime.Today);
+    private string ttn = "";
+    private string soldThrough = "";
+    private string additionalService = "";
+    private string saleError = "";
+
+    // Категории и товары
+    private List<string> categories = new List<string>();
+    private string selectedCategory = "";
+    private List<string> availableProductNames = new List<string>();
+    private string selectedProductName = "";
+    private List<string> availableColors = new List<string>();
+    private string selectedColor = "";
+
+    // Корзина
+    private List<CartItem> cartItems = new List<CartItem>();
+    private bool showItemSelector = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSales();
+        await LoadCategories();
+    }
+
+    private async Task LoadSales()
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        sales = await context.Sales
+            .Include(s => s.Products)
+            .OrderByDescending(s => s.SaleDate)
+            .ToListAsync();
+    }
+
+    private string GetStatusText(string status)
+    {
+        return status switch
+        {
+            "Отправлено" => "В ПУТИ",
+            "Получено" => "ПРОДАНО ✓",
+            "Возврат" => "ВОЗВРАТ",
+            "Частичный возврат" => "ЧАС. ВОЗВРАТ",
+            _ => status
+        };
+    }
+
+    private string GetStatusClass(string status)
+    {
+        return status switch
+        {
+            "Отправлено" => "status-отправлено",
+            "Получено" => "status-получено",
+            "Возврат" => "status-возврат",
+            "Частичный возврат" => "status-частичный-возврат",
+            _ => ""
+        };
+    }
+
+    private void ToggleExpand(int saleId)
+    {
+        if (expandedSaleId == saleId)
+            expandedSaleId = null;
+        else
+            expandedSaleId = saleId;
+
+        StateHasChanged();
+    }
+
+    private async Task LoadCategories()
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        categories = await context.Categories
+            .OrderBy(c => c.Name)
+            .Select(c => c.Name)
+            .ToListAsync();
+    }
+
+    private async Task LoadProductNames()
+    {
+        if (string.IsNullOrEmpty(selectedCategory))
+        {
+            availableProductNames.Clear();
+            return;
+        }
+
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        availableProductNames = await context.Products
+            .Where(p => p.Category == selectedCategory && p.Status == "В наличии")
+            .Select(p => p.Name)
+            .Distinct()
+            .OrderBy(n => n)
+            .ToListAsync();
+
+        StateHasChanged();
+    }
+
+    private async Task LoadColorsForProduct()
+    {
+        availableColors.Clear();
+        selectedColor = "";
+
+        if (string.IsNullOrEmpty(selectedCategory) || string.IsNullOrEmpty(selectedProductName))
+        {
+            StateHasChanged();
+            return;
+        }
+
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        availableColors = await context.Products
+            .Where(p => p.Category == selectedCategory && p.Name == selectedProductName && p.Status == "В наличии" && !string.IsNullOrEmpty(p.Color))
+            .Select(p => p.Color!)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
+
+        StateHasChanged();
+    }
+
+    private void ShowAddSaleModal()
+    {
+        buyer = "";
+        saleDate = DateOnly.FromDateTime(DateTime.Today);
+        ttn = "";
+        soldThrough = "";
+        additionalService = "";
+        saleError = "";
+        cartItems.Clear();
+        showItemSelector = false;
+        selectedCategory = "";
+        selectedProductName = "";
+        selectedColor = "";
+        availableProductNames.Clear();
+        availableColors.Clear();
+        showAddSaleModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseAddSaleModal()
+    {
+        showAddSaleModal = false;
+        StateHasChanged();
+    }
+
+    private void ShowItemSelector()
+    {
+        showItemSelector = true;
+        selectedCategory = "";
+        selectedProductName = "";
+        selectedColor = "";
+        availableProductNames.Clear();
+        availableColors.Clear();
+        StateHasChanged();
+    }
+
+    private void CancelItemSelection()
+    {
+        showItemSelector = false;
+        selectedCategory = "";
+        selectedProductName = "";
+        selectedColor = "";
+        availableProductNames.Clear();
+        availableColors.Clear();
+        StateHasChanged();
+    }
+
+    private async Task AddItemToCart()
+    {
+        if (string.IsNullOrEmpty(selectedCategory) || string.IsNullOrEmpty(selectedProductName))
+            return;
+
+        // Проверяем, не добавлен ли уже этот товар с таким цветом
+        var colorToCheck = string.IsNullOrEmpty(selectedColor) ? null : selectedColor;
+        if (cartItems.Any(i => i.Category == selectedCategory && i.ProductName == selectedProductName && i.Color == colorToCheck))
+        {
+            saleError = "Этот товар уже добавлен в корзину!";
+            StateHasChanged();
+            return;
+        }
+
+        // Получаем цену товара для предзаполнения
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        var query = context.Products
+            .Where(p => p.Category == selectedCategory && p.Name == selectedProductName && p.Status == "В наличии");
+
+        // Фильтруем по цвету если он выбран
+        if (!string.IsNullOrEmpty(selectedColor))
+        {
+            query = query.Where(p => p.Color == selectedColor);
+        }
+
+        var product = await query
+            .OrderByDescending(p => p.Id)
+            .FirstOrDefaultAsync();
+
+        if (product == null)
+        {
+            saleError = "Товар не найден в наличии!";
+            StateHasChanged();
+            return;
+        }
+
+        var cartItem = new CartItem
+        {
+            Category = selectedCategory,
+            ProductName = selectedProductName,
+            Color = string.IsNullOrEmpty(selectedColor) ? null : selectedColor,
+            SalePrice = product.PlannedPrice ?? product.PurchasePrice
+        };
+
+        cartItems.Add(cartItem);
+
+        showItemSelector = false;
+        selectedCategory = "";
+        selectedProductName = "";
+        selectedColor = "";
+        availableProductNames.Clear();
+        availableColors.Clear();
+        saleError = "";
+        StateHasChanged();
+    }
+
+    private void RemoveItemFromCart(CartItem item)
+    {
+        cartItems.Remove(item);
+        StateHasChanged();
+    }
+
+    private async Task CompleteSale()
+    {
+        saleError = "";
+
+        // Валидация
+        if (string.IsNullOrWhiteSpace(buyer))
+        {
+            saleError = "Укажите покупателя!";
+            StateHasChanged();
+            return;
+        }
+
+        if (!cartItems.Any())
+        {
+            saleError = "Добавьте хотя бы один товар!";
+            StateHasChanged();
+            return;
+        }
+
+        if (cartItems.Any(i => i.SalePrice <= 0))
+        {
+            saleError = "Укажите корректные цены для всех товаров!";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Создаем новую продажу
+            var sale = new Sale
+            {
+                Buyer = buyer.Trim(),
+                SaleDate = saleDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+                TTN = string.IsNullOrWhiteSpace(ttn) ? null : ttn.Trim(),
+                SoldThrough = string.IsNullOrWhiteSpace(soldThrough) ? null : soldThrough.Trim(),
+                AdditionalService = string.IsNullOrWhiteSpace(additionalService) ? null : additionalService.Trim(),
+                TotalAmount = cartItems.Sum(i => i.SalePrice),
+                Status = "Отправлено",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.Sales.Add(sale);
+            await context.SaveChangesAsync(); // Сохраняем продажу чтобы получить Id
+
+            // Для каждого товара в корзине находим последнюю доступную позицию и привязываем к продаже
+            foreach (var cartItem in cartItems)
+            {
+                var query = context.Products
+                    .Where(p => p.Category == cartItem.Category &&
+                               p.Name == cartItem.ProductName &&
+                               p.Status == "В наличии");
+
+                // Фильтруем по цвету если он указан
+                if (!string.IsNullOrEmpty(cartItem.Color))
+                {
+                    query = query.Where(p => p.Color == cartItem.Color);
+                }
+
+                var product = await query
+                    .OrderByDescending(p => p.Id)
+                    .FirstOrDefaultAsync();
+
+                if (product == null)
+                {
+                    // Откатываем транзакцию если товар больше не доступен
+                    var productDesc = string.IsNullOrEmpty(cartItem.Color)
+                        ? $"'{cartItem.ProductName}'"
+                        : $"'{cartItem.ProductName}' ({cartItem.Color})";
+                    saleError = $"Товар {productDesc} больше не доступен в наличии!";
+                    context.Sales.Remove(sale);
+                    await context.SaveChangesAsync();
+                    StateHasChanged();
+                    return;
+                }
+
+                // Обновляем данные товара
+                product.Status = "Отправлено";
+                product.Buyer = buyer.Trim();
+                product.SalePrice = cartItem.SalePrice;
+                product.SaleDate = saleDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+                product.SaleId = sale.Id;
+                product.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await context.SaveChangesAsync();
+
+            // Обновляем список продаж
+            await LoadSales();
+
+            CloseAddSaleModal();
+        }
+        catch (Exception ex)
+        {
+            saleError = $"Ошибка при оформлении продажи: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private class CartItem
+    {
+        public string Category { get; set; } = "";
+        public string ProductName { get; set; } = "";
+        public string? Color { get; set; }
+        public decimal SalePrice { get; set; }
+    }
+}

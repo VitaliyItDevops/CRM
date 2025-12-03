@@ -1,0 +1,1371 @@
+@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using bryx_CRM.Data
+@using bryx_CRM.Data.Models
+@using System.Text.Json
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject IJSRuntime JSRuntime
+@inject UserManager<ApplicationUser> UserManager
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Главная - bryx CRM</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-4">📊 Панель управления</h1>
+            <p class="text-muted">Добро пожаловать в систему управления складом bryx CRM</p>
+        </div>
+    </div>
+
+    <!-- Управление пользователями -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">👥 Управление пользователями</h5>
+                        <button class="btn btn-primary btn-sm" @onclick="ToggleAddUserForm">
+                            @(showAddUserForm ? "✕ Закрыть" : "+ Добавить пользователя")
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (showAddUserForm)
+                    {
+                        <div class="add-user-form mb-4 p-3 bg-light rounded">
+                            <h6 class="mb-3">Новый пользователь</h6>
+
+                            @if (!string.IsNullOrEmpty(userFormError))
+                            {
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    @userFormError
+                                    <button type="button" class="btn-close" @onclick="@(() => userFormError = "")"></button>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(userFormSuccess))
+                            {
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    @userFormSuccess
+                                    <button type="button" class="btn-close" @onclick="@(() => userFormSuccess = "")"></button>
+                                </div>
+                            }
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Полное имя</label>
+                                    <input type="text" class="form-control" @bind="newUserFullName" placeholder="Иван Иванов" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" @bind="newUserEmail" placeholder="user@example.com" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Пароль</label>
+                                    <input type="password" class="form-control" @bind="newUserPassword" placeholder="Минимум 6 символов" />
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-success" @onclick="CreateUser" disabled="@isCreatingUser">
+                                    @if (isCreatingUser)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Создание...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Создать пользователя</span>
+                                    }
+                                </button>
+                                <button class="btn btn-secondary ms-2" @onclick="@(() => showAddUserForm = false)">Отмена</button>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Имя</th>
+                                    <th>Email</th>
+                                    <th>Создан</th>
+                                    <th>Последний вход</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in allUsers)
+                                {
+                                    <tr>
+                                        <td>@(user.FullName ?? "—")</td>
+                                        <td>@user.Email</td>
+                                        <td>@user.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@(user.LastLoginAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "Не входил")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+            <p class="mt-3">Загрузка статистики...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Основные метрики -->
+        <div class="row g-4 mb-4">
+            <!-- В наличии -->
+            <div class="col-md-6 col-xl-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted text-uppercase mb-2" style="font-size: 0.75rem;">В наличии</h6>
+                                <h2 class="mb-0 fw-bold">@inStockCount</h2>
+                                <small class="text-success">
+                                    <span class="badge bg-success-subtle text-success mt-2">
+                                        На сумму: @inStockValue.ToString("N0") ₽
+                                    </span>
+                                </small>
+                            </div>
+                            <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                                <svg width="32" height="32" fill="currentColor" class="text-success">
+                                    <use href="#box-icon"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ожидается -->
+            <div class="col-md-6 col-xl-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted text-uppercase mb-2" style="font-size: 0.75rem;">Ожидается</h6>
+                                <h2 class="mb-0 fw-bold">@expectedCount</h2>
+                                <small class="text-warning">
+                                    <span class="badge bg-warning-subtle text-warning mt-2">
+                                        На сумму: @expectedValue.ToString("N0") ₽
+                                    </span>
+                                </small>
+                            </div>
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                                <svg width="32" height="32" fill="currentColor" class="text-warning">
+                                    <use href="#clock-icon"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Отправлено -->
+            <div class="col-md-6 col-xl-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted text-uppercase mb-2" style="font-size: 0.75rem;">Отправлено</h6>
+                                <h2 class="mb-0 fw-bold">@shippedCount</h2>
+                                <small class="text-info">
+                                    <span class="badge bg-info-subtle text-info mt-2">
+                                        На сумму: @shippedValue.ToString("N0") ₽
+                                    </span>
+                                </small>
+                            </div>
+                            <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                                <svg width="32" height="32" fill="currentColor" class="text-info">
+                                    <use href="#truck-icon"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Продано -->
+            <div class="col-md-6 col-xl-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted text-uppercase mb-2" style="font-size: 0.75rem;">Продано</h6>
+                                <h2 class="mb-0 fw-bold">@soldCount</h2>
+                                <small class="text-primary">
+                                    <span class="badge bg-primary-subtle text-primary mt-2">
+                                        На сумму: @soldValue.ToString("N0") ₽
+                                    </span>
+                                </small>
+                            </div>
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                                <svg width="32" height="32" fill="currentColor" class="text-primary">
+                                    <use href="#cart-icon"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Финансовая сводка -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">💰 Выручка</h5>
+                        <h3 class="mb-0 text-success fw-bold">@totalRevenue.ToString("N2") ₽</h3>
+                        <p class="text-muted small mt-2 mb-0">Общая выручка от продаж</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">📈 Прибыль</h5>
+                        <h3 class="mb-0 text-primary fw-bold">@totalProfit.ToString("N2") ₽</h3>
+                        <p class="text-muted small mt-2 mb-0">Чистая прибыль</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">💹 Маржа</h5>
+                        <h3 class="mb-0 fw-bold" style="color: #6610f2;">@averageMargin.ToString("N1")%</h3>
+                        <p class="text-muted small mt-2 mb-0">Средняя маржинальность</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">💼 Сальдо</h5>
+                        <h3 class="mb-0 fw-bold" style="color: #d63384;">@totalBalance.ToString("N2") ₽</h3>
+                        <p class="text-muted small mt-2 mb-0">Текущий баланс активов</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Продажи и категории -->
+        <div class="row g-4 mb-4">
+            <!-- Последние продажи -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0 pt-3 pb-0">
+                        <h5 class="card-title mb-3">🛒 Последние продажи</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (recentSales.Any())
+                        {
+                            <div class="list-group list-group-flush">
+                                @foreach (var sale in recentSales)
+                                {
+                                    <div class="list-group-item border-0 px-0">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">@sale.Buyer</h6>
+                                                <small class="text-muted">
+                                                    @sale.SaleDate?.ToString("dd.MM.yyyy HH:mm") |
+                                                    @sale.ProductCount товар(ов)
+                                                </small>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="fw-bold text-success">@sale.TotalAmount.ToString("N0") ₽</div>
+                                                <span class="badge @GetStatusBadgeClass(sale.Status) mt-1">
+                                                    @GetStatusText(sale.Status)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-4 mb-0">Нет продаж</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Статистика по категориям -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0 pt-3 pb-0">
+                        <h5 class="card-title mb-3">📦 Категории товаров</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (categoryStats.Any())
+                        {
+                            <div class="list-group list-group-flush">
+                                @foreach (var cat in categoryStats)
+                                {
+                                    <div class="list-group-item border-0 px-0">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">@cat.CategoryName</h6>
+                                                <div class="progress" style="height: 8px;">
+                                                    <div class="progress-bar" role="progressbar"
+                                                         style="width: @cat.Percentage%;"
+                                                         aria-valuenow="@cat.Percentage"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-end ms-3">
+                                                <div class="fw-bold">@cat.Count</div>
+                                                <small class="text-muted">@cat.Percentage.ToString("N1")%</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-4 mb-0">Нет данных по категориям</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Избранные товары -->
+        @if (favoriteProducts.Any())
+        {
+            <div class="row g-4 mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 pt-3 pb-0">
+                            <h5 class="card-title mb-3">⭐ Избранные товары</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Категория</th>
+                                            <th>Название</th>
+                                            <th>Цвет</th>
+                                            <th>Статус</th>
+                                            <th class="text-end">Цена закупки</th>
+                                            <th class="text-end">Цена продажи</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var product in favoriteProducts)
+                                        {
+                                            <tr>
+                                                <td>@product.Category</td>
+                                                <td>@product.Name</td>
+                                                <td>
+                                                    @if (!string.IsNullOrWhiteSpace(product.Color))
+                                                    {
+                                                        <span class="badge bg-secondary">@product.Color</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">—</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="badge @GetProductStatusBadgeClass(product.Status)">
+                                                        @product.Status
+                                                    </span>
+                                                </td>
+                                                <td class="text-end">@product.PurchasePrice.ToString("N2") ₽</td>
+                                                <td class="text-end">@product.SalePrice.ToString("N2") ₽</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Графики аналитики -->
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <h2 class="h4 mb-3">📈 Аналитика и графики</h2>
+            </div>
+
+            <!-- Общие фильтры -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- Период -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">📅 Период</label>
+                                <div class="row g-2">
+                                    <div class="col">
+                                        <input type="date" class="form-control form-control-sm" @bind="dateFrom" />
+                                        <small class="text-muted">От</small>
+                                    </div>
+                                    <div class="col">
+                                        <input type="date" class="form-control form-control-sm" @bind="dateTo" />
+                                        <small class="text-muted">До</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Быстрый выбор периода -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">⚡ Быстрый выбор</label>
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => SetPeriod(7)">7 дней</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => SetPeriod(30)">Месяц</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => SetPeriod(90)">3 месяца</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => SetPeriod(365)">Год</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="SetAllTime">Всё время</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- График по категориям -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">📦 Аналитика по категориям</h5>
+                            <button class="btn btn-sm btn-primary" @onclick="UpdateCharts">
+                                <i class="bi bi-arrow-clockwise"></i> Обновить
+                            </button>
+                        </div>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-6">
+                                <select class="form-select form-select-sm" @bind="selectedCategory" @bind:after="OnCategoryChanged">
+                                    <option value="">Все категории</option>
+                                    @foreach (var cat in availableCategories)
+                                    {
+                                        <option value="@cat">@cat</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- График по моделям -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">🏷️ Аналитика по моделям</h5>
+                            <button class="btn btn-sm btn-primary" @onclick="UpdateCharts">
+                                <i class="bi bi-arrow-clockwise"></i> Обновить
+                            </button>
+                        </div>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-6">
+                                <select class="form-select form-select-sm" @bind="selectedModel" @bind:after="OnModelChanged">
+                                    <option value="">Все модели</option>
+                                    @foreach (var model in availableModels)
+                                    {
+                                        <option value="@model">@model</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="modelChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- График по цветам -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">🎨 Аналитика по цветам</h5>
+                            <button class="btn btn-sm btn-primary" @onclick="UpdateCharts">
+                                <i class="bi bi-arrow-clockwise"></i> Обновить
+                            </button>
+                        </div>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-6">
+                                <select class="form-select form-select-sm" @bind="selectedColor">
+                                    <option value="">Все цвета</option>
+                                    @foreach (var color in availableColors)
+                                    {
+                                        <option value="@color">@color</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="colorChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+
+    /* Мобильные устройства */
+    @@media (max-width: 767px) {
+        .chart-container {
+            height: 400px;
+        }
+
+        .card-header h5 {
+            font-size: 0.95rem;
+        }
+
+        .btn-sm {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+    }
+
+    /* Планшеты */
+    @@media (min-width: 768px) and (max-width: 1023px) {
+        .chart-container {
+            height: 380px;
+        }
+    }
+</style>
+
+<!-- SVG Icons -->
+<svg style="display: none;">
+    <symbol id="box-icon" viewBox="0 0 16 16">
+        <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5 8.186 1.113zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
+    </symbol>
+    <symbol id="clock-icon" viewBox="0 0 16 16">
+        <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+        <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+    </symbol>
+    <symbol id="truck-icon" viewBox="0 0 16 16">
+        <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h9A1.5 1.5 0 0 1 12 3.5V5h1.02a1.5 1.5 0 0 1 1.17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-3.998-.085A1.5 1.5 0 0 1 0 10.5v-7zm1.294 7.456A1.999 1.999 0 0 1 4.732 11h5.536a2.01 2.01 0 0 1 .732-.732V3.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .294.456zM12 10a2 2 0 0 1 1.732 1h.768a.5.5 0 0 0 .5-.5V8.35a.5.5 0 0 0-.11-.312l-1.48-1.85A.5.5 0 0 0 13.02 6H12v4zm-9 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+    </symbol>
+    <symbol id="cart-icon" viewBox="0 0 16 16">
+        <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+    </symbol>
+</svg>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+    let chartInstances = {};
+
+    window.renderMultiMetricChart = function(canvasId, chartData) {
+        // Уничтожаем старый график если существует
+        if (chartInstances[canvasId]) {
+            chartInstances[canvasId].destroy();
+        }
+
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) {
+            console.error('Canvas not found:', canvasId);
+            return;
+        }
+
+        // Определяем, мобильное ли это устройство
+        const isMobile = window.innerWidth < 768;
+
+        // Создаем столбчатый график с несколькими метриками
+        chartInstances[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: isMobile ? 'bottom' : 'top',
+                        labels: {
+                            boxWidth: isMobile ? 8 : 12,
+                            padding: isMobile ? 5 : 10,
+                            font: { size: isMobile ? 8 : 10 }
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                let value = context.parsed.y;
+
+                                // Форматируем в зависимости от типа метрики
+                                if (label.includes('₽')) {
+                                    return label + ': ' + new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
+                                } else if (label.includes('%')) {
+                                    return label + ': ' + value.toFixed(1) + '%';
+                                } else if (label.includes('шт')) {
+                                    return label + ': ' + value + ' шт';
+                                } else {
+                                    return label + ': ' + value;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { size: isMobile ? 9 : 11 },
+                            maxRotation: isMobile ? 45 : 0,
+                            minRotation: isMobile ? 45 : 0
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            font: { size: isMobile ? 9 : 10 },
+                            callback: function(value) {
+                                return new Intl.NumberFormat('ru-RU', {
+                                    notation: 'compact',
+                                    compactDisplay: 'short'
+                                }).format(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+</script>
+
+@code {
+    private bool isLoading = true;
+
+    // Основные метрики
+    private int inStockCount = 0;
+    private decimal inStockValue = 0;
+    private int expectedCount = 0;
+    private decimal expectedValue = 0;
+    private int shippedCount = 0;
+    private decimal shippedValue = 0;
+    private int soldCount = 0;
+    private decimal soldValue = 0;
+
+    // Финансовые метрики
+    private decimal totalRevenue = 0;
+    private decimal totalProfit = 0;
+    private decimal averageMargin = 0;
+    private decimal totalBalance = 0;
+
+    // Коллекции данных
+    private List<SaleInfo> recentSales = new();
+    private List<CategoryStat> categoryStats = new();
+    private List<Product> favoriteProducts = new();
+
+    // Фильтры для графика
+    private DateTime dateFrom = DateTime.UtcNow.AddMonths(-1);
+    private DateTime dateTo = DateTime.UtcNow;
+    private string selectedCategory = "";
+    private string selectedModel = "";
+    private string selectedColor = "";
+    private bool chartRendered = false;
+
+    // Доступные опции для фильтров
+    private List<string> availableCategories = new();
+    private List<string> availableModels = new();
+    private List<string> availableColors = new();
+
+    // Данные для графиков аналитики
+    private List<AnalyticsData> categoryData = new();
+    private List<AnalyticsData> modelData = new();
+    private List<AnalyticsData> colorData = new();
+
+    // Управление пользователями
+    private List<ApplicationUser> allUsers = new();
+    private bool showAddUserForm = false;
+    private string newUserFullName = "";
+    private string newUserEmail = "";
+    private string newUserPassword = "";
+    private string userFormError = "";
+    private string userFormSuccess = "";
+    private bool isCreatingUser = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+        await LoadStatistics();
+        await LoadFilterOptions();
+    }
+
+    private async Task LoadUsers()
+    {
+        allUsers = await UserManager.Users.OrderBy(u => u.CreatedAt).ToListAsync();
+    }
+
+    private void ToggleAddUserForm()
+    {
+        showAddUserForm = !showAddUserForm;
+        if (showAddUserForm)
+        {
+            // Сброс формы
+            newUserFullName = "";
+            newUserEmail = "";
+            newUserPassword = "";
+            userFormError = "";
+            userFormSuccess = "";
+        }
+    }
+
+    private async Task CreateUser()
+    {
+        userFormError = "";
+        userFormSuccess = "";
+
+        // Валидация
+        if (string.IsNullOrWhiteSpace(newUserFullName))
+        {
+            userFormError = "Введите полное имя пользователя";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newUserEmail))
+        {
+            userFormError = "Введите email";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newUserPassword))
+        {
+            userFormError = "Введите пароль";
+            return;
+        }
+
+        if (newUserPassword.Length < 6)
+        {
+            userFormError = "Пароль должен содержать минимум 6 символов";
+            return;
+        }
+
+        isCreatingUser = true;
+        StateHasChanged();
+
+        try
+        {
+            var user = new ApplicationUser
+            {
+                UserName = newUserEmail,
+                Email = newUserEmail,
+                FullName = newUserFullName,
+                EmailConfirmed = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var result = await UserManager.CreateAsync(user, newUserPassword);
+
+            if (result.Succeeded)
+            {
+                userFormSuccess = $"Пользователь {newUserFullName} ({newUserEmail}) успешно создан!";
+
+                // Очистка формы
+                newUserFullName = "";
+                newUserEmail = "";
+                newUserPassword = "";
+
+                // Перезагрузка списка
+                await LoadUsers();
+            }
+            else
+            {
+                userFormError = "Ошибка создания пользователя: " + string.Join(", ", result.Errors.Select(e => e.Description));
+            }
+        }
+        catch (Exception ex)
+        {
+            userFormError = $"Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            isCreatingUser = false;
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!isLoading && !chartRendered)
+        {
+            chartRendered = true;
+            await Task.Delay(500);
+            await UpdateCharts();
+        }
+    }
+
+    private async Task LoadFilterOptions()
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+
+        availableCategories = await context.Products
+            .Select(p => p.Category)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
+
+        availableModels = await context.Products
+            .Select(p => p.Name)
+            .Distinct()
+            .OrderBy(n => n)
+            .ToListAsync();
+
+        availableColors = await context.Products
+            .Where(p => !string.IsNullOrWhiteSpace(p.Color))
+            .Select(p => p.Color!)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
+    }
+
+    private void SetPeriod(int days)
+    {
+        dateTo = DateTime.UtcNow;
+        dateFrom = dateTo.AddDays(-days);
+    }
+
+    private async Task SetAllTime()
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        var minDate = await context.Products
+            .Where(p => p.CreatedAt != DateTime.MinValue)
+            .OrderBy(p => p.CreatedAt)
+            .Select(p => p.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        dateFrom = minDate != default ? minDate : DateTime.UtcNow.AddYears(-5);
+        dateTo = DateTime.UtcNow;
+    }
+
+    private async Task OnCategoryChanged()
+    {
+        // Обновляем доступные модели в зависимости от выбранной категории
+        using var context = await DbContextFactory.CreateDbContextAsync();
+
+        if (string.IsNullOrEmpty(selectedCategory))
+        {
+            // Если категория не выбрана - показываем все модели
+            availableModels = await context.Products
+                .Select(p => p.Name)
+                .Distinct()
+                .OrderBy(n => n)
+                .ToListAsync();
+        }
+        else
+        {
+            // Если категория выбрана - показываем только модели этой категории
+            availableModels = await context.Products
+                .Where(p => p.Category == selectedCategory)
+                .Select(p => p.Name)
+                .Distinct()
+                .OrderBy(n => n)
+                .ToListAsync();
+        }
+
+        // Сбрасываем выбранную модель, если её больше нет в списке
+        if (!string.IsNullOrEmpty(selectedModel) && !availableModels.Contains(selectedModel))
+        {
+            selectedModel = "";
+        }
+
+        // Обновляем графики
+        await UpdateCharts();
+    }
+
+    private async Task OnModelChanged()
+    {
+        // Обновляем доступные цвета в зависимости от выбранной модели
+        using var context = await DbContextFactory.CreateDbContextAsync();
+
+        if (string.IsNullOrEmpty(selectedModel))
+        {
+            // Если модель не выбрана - показываем все цвета
+            availableColors = await context.Products
+                .Where(p => !string.IsNullOrWhiteSpace(p.Color))
+                .Select(p => p.Color!)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToListAsync();
+        }
+        else
+        {
+            // Если модель выбрана - показываем только цвета этой модели
+            availableColors = await context.Products
+                .Where(p => p.Name == selectedModel && !string.IsNullOrWhiteSpace(p.Color))
+                .Select(p => p.Color!)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToListAsync();
+        }
+
+        // Сбрасываем выбранный цвет, если его больше нет в списке
+        if (!string.IsNullOrEmpty(selectedColor) && !availableColors.Contains(selectedColor))
+        {
+            selectedColor = "";
+        }
+
+        // Обновляем графики
+        await UpdateCharts();
+    }
+
+    private async Task UpdateCharts()
+    {
+        StateHasChanged();
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            var allProducts = await context.Products.ToListAsync();
+
+            // Используем уже существующие данные из PrepareChartData
+            await RenderSimpleCharts();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating charts: {ex.Message}");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task RenderSimpleCharts()
+    {
+        try
+        {
+            // График по категориям - фильтруем если выбрана категория
+            var filteredCategoryData = string.IsNullOrEmpty(selectedCategory)
+                ? categoryData
+                : categoryData.Where(d => d.Label == selectedCategory).ToList();
+
+            if (filteredCategoryData.Any())
+            {
+                var catData = new
+                {
+                    labels = filteredCategoryData.Select(d => d.Label).ToArray(),
+                    datasets = new object[]
+                    {
+                        new { label = "Продано (шт)", data = filteredCategoryData.Select(d => (double)d.Units).ToArray(), backgroundColor = "#0d6efd" },
+                        new { label = "Выручка (₽)", data = filteredCategoryData.Select(d => (double)d.Revenue).ToArray(), backgroundColor = "#198754" },
+                        new { label = "Затраты (₽)", data = filteredCategoryData.Select(d => (double)d.Costs).ToArray(), backgroundColor = "#fd7e14" },
+                        new { label = "Прибыль (₽)", data = filteredCategoryData.Select(d => (double)d.Profit).ToArray(), backgroundColor = "#6610f2" },
+                        new { label = "Маржа (%)", data = filteredCategoryData.Select(d => (double)d.Margin).ToArray(), backgroundColor = "#ffc107" },
+                        new { label = "Сальдо (₽)", data = filteredCategoryData.Select(d => (double)d.Balance).ToArray(), backgroundColor = "#d63384" },
+                        new { label = "Возвраты (шт)", data = filteredCategoryData.Select(d => (double)d.Returns).ToArray(), backgroundColor = "#6c757d" },
+                        new { label = "Брак (шт)", data = filteredCategoryData.Select(d => (double)d.Defective).ToArray(), backgroundColor = "#dc3545" }
+                    }
+                };
+                await JSRuntime.InvokeVoidAsync("renderMultiMetricChart", "categoryChart", catData);
+            }
+
+            // График по моделям - фильтруем если выбрана модель
+            var filteredModelData = string.IsNullOrEmpty(selectedModel)
+                ? modelData
+                : modelData.Where(d => d.Label == selectedModel).ToList();
+
+            if (filteredModelData.Any())
+            {
+                var modData = new
+                {
+                    labels = filteredModelData.Select(d => d.Label).ToArray(),
+                    datasets = new object[]
+                    {
+                        new { label = "Продано (шт)", data = filteredModelData.Select(d => (double)d.Units).ToArray(), backgroundColor = "#0d6efd" },
+                        new { label = "Выручка (₽)", data = filteredModelData.Select(d => (double)d.Revenue).ToArray(), backgroundColor = "#198754" },
+                        new { label = "Затраты (₽)", data = filteredModelData.Select(d => (double)d.Costs).ToArray(), backgroundColor = "#fd7e14" },
+                        new { label = "Прибыль (₽)", data = filteredModelData.Select(d => (double)d.Profit).ToArray(), backgroundColor = "#6610f2" },
+                        new { label = "Маржа (%)", data = filteredModelData.Select(d => (double)d.Margin).ToArray(), backgroundColor = "#ffc107" },
+                        new { label = "Сальдо (₽)", data = filteredModelData.Select(d => (double)d.Balance).ToArray(), backgroundColor = "#d63384" },
+                        new { label = "Возвраты (шт)", data = filteredModelData.Select(d => (double)d.Returns).ToArray(), backgroundColor = "#6c757d" },
+                        new { label = "Брак (шт)", data = filteredModelData.Select(d => (double)d.Defective).ToArray(), backgroundColor = "#dc3545" }
+                    }
+                };
+                await JSRuntime.InvokeVoidAsync("renderMultiMetricChart", "modelChart", modData);
+            }
+
+            // График по цветам - фильтруем если выбран цвет
+            var filteredColorData = string.IsNullOrEmpty(selectedColor)
+                ? colorData
+                : colorData.Where(d => d.Label == selectedColor).ToList();
+
+            if (filteredColorData.Any())
+            {
+                var colData = new
+                {
+                    labels = filteredColorData.Select(d => d.Label).ToArray(),
+                    datasets = new object[]
+                    {
+                        new { label = "Продано (шт)", data = filteredColorData.Select(d => (double)d.Units).ToArray(), backgroundColor = "#0d6efd" },
+                        new { label = "Выручка (₽)", data = filteredColorData.Select(d => (double)d.Revenue).ToArray(), backgroundColor = "#198754" },
+                        new { label = "Затраты (₽)", data = filteredColorData.Select(d => (double)d.Costs).ToArray(), backgroundColor = "#fd7e14" },
+                        new { label = "Прибыль (₽)", data = filteredColorData.Select(d => (double)d.Profit).ToArray(), backgroundColor = "#6610f2" },
+                        new { label = "Маржа (%)", data = filteredColorData.Select(d => (double)d.Margin).ToArray(), backgroundColor = "#ffc107" },
+                        new { label = "Сальдо (₽)", data = filteredColorData.Select(d => (double)d.Balance).ToArray(), backgroundColor = "#d63384" },
+                        new { label = "Возвраты (шт)", data = filteredColorData.Select(d => (double)d.Returns).ToArray(), backgroundColor = "#6c757d" },
+                        new { label = "Брак (шт)", data = filteredColorData.Select(d => (double)d.Defective).ToArray(), backgroundColor = "#dc3545" }
+                    }
+                };
+                await JSRuntime.InvokeVoidAsync("renderMultiMetricChart", "colorChart", colData);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rendering charts: {ex.Message}");
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        isLoading = true;
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Загрузка основных метрик по товарам
+            var allProducts = await context.Products.ToListAsync();
+
+            inStockCount = allProducts.Count(p => p.Status == "В наличии");
+            inStockValue = allProducts.Where(p => p.Status == "В наличии").Sum(p => p.PurchasePrice);
+
+            expectedCount = allProducts.Count(p => p.Status == "Ожидается");
+            expectedValue = allProducts.Where(p => p.Status == "Ожидается").Sum(p => p.PurchasePrice);
+
+            shippedCount = allProducts.Count(p => p.Status == "Отправлено");
+            shippedValue = allProducts.Where(p => p.Status == "Отправлено").Sum(p => p.SalePrice);
+
+            soldCount = allProducts.Count(p => p.Status == "Продано");
+            soldValue = allProducts.Where(p => p.Status == "Продано").Sum(p => p.SalePrice);
+
+            // Финансовые расчеты
+            var soldProducts = allProducts.Where(p => p.Status == "Продано").ToList();
+            totalRevenue = soldProducts.Sum(p => p.SalePrice);
+            totalProfit = soldProducts.Sum(p => p.SalePrice - p.PurchasePrice);
+
+            if (soldProducts.Any() && totalRevenue > 0)
+            {
+                averageMargin = (totalProfit / totalRevenue) * 100;
+            }
+
+            // Сальдо = Текущие активы (в наличии + ожидается + отправлено)
+            totalBalance = inStockValue + expectedValue + shippedValue;
+
+            // Загрузка последних продаж
+            var sales = await context.Sales
+                .OrderByDescending(s => s.SaleDate)
+                .Take(5)
+                .ToListAsync();
+
+            recentSales = new List<SaleInfo>();
+            foreach (var sale in sales)
+            {
+                var products = await context.Products.Where(p => p.SaleId == sale.Id).ToListAsync();
+                recentSales.Add(new SaleInfo
+                {
+                    Buyer = sale.Buyer ?? "Неизвестно",
+                    SaleDate = sale.SaleDate,
+                    TotalAmount = sale.TotalAmount,
+                    ProductCount = products.Count,
+                    Status = sale.Status ?? "Отправлено"
+                });
+            }
+
+            // Статистика по категориям (только товары в наличии)
+            var inStockProducts = allProducts.Where(p => p.Status == "В наличии").ToList();
+            var totalInStock = inStockProducts.Count;
+
+            if (totalInStock > 0)
+            {
+                categoryStats = inStockProducts
+                    .GroupBy(p => p.Category)
+                    .Select(g => new CategoryStat
+                    {
+                        CategoryName = g.Key,
+                        Count = g.Count(),
+                        Percentage = (g.Count() * 100.0 / totalInStock)
+                    })
+                    .OrderByDescending(c => c.Count)
+                    .ToList();
+            }
+
+            // Избранные товары
+            favoriteProducts = allProducts
+                .Where(p => p.IsFavorite)
+                .OrderBy(p => p.Category)
+                .ThenBy(p => p.Name)
+                .Take(10)
+                .ToList();
+
+            // Подготовка данных для графиков
+            await PrepareChartData(allProducts);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task PrepareChartData(List<Product> allProducts)
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+
+        // Данные по категориям
+        categoryData = allProducts
+            .GroupBy(p => p.Category)
+            .Select(g => new AnalyticsData
+            {
+                Label = g.Key,
+                Balance = g.Sum(p => (p.Status == "В наличии" || p.Status == "Ожидается" || p.Status == "Отправлено") ? p.PurchasePrice : 0),
+                Revenue = g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice),
+                Profit = g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice - p.PurchasePrice),
+                Margin = g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice) > 0
+                    ? (g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice - p.PurchasePrice) / g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice)) * 100
+                    : 0,
+                Costs = g.Sum(p => p.PurchasePrice),
+                Units = g.Count(),
+                Returns = g.Count(p => p.Status == "Возврат" || p.Status == "Частичный возврат"),
+                Defective = g.Count(p => p.IsDefective)
+            })
+            .OrderByDescending(d => d.Revenue)
+            .Take(10)
+            .ToList();
+
+        // Данные по моделям (названиям товаров) - учитываем фильтр по категории
+        var productsForModels = string.IsNullOrEmpty(selectedCategory)
+            ? allProducts
+            : allProducts.Where(p => p.Category == selectedCategory).ToList();
+
+        modelData = productsForModels
+            .GroupBy(p => p.Name)
+            .Select(g => new AnalyticsData
+            {
+                Label = g.Key,
+                Balance = g.Sum(p => (p.Status == "В наличии" || p.Status == "Ожидается" || p.Status == "Отправлено") ? p.PurchasePrice : 0),
+                Revenue = g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice),
+                Profit = g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice - p.PurchasePrice),
+                Margin = g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice) > 0
+                    ? (g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice - p.PurchasePrice) / g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice)) * 100
+                    : 0,
+                Costs = g.Sum(p => p.PurchasePrice),
+                Units = g.Count(),
+                Returns = g.Count(p => p.Status == "Возврат" || p.Status == "Частичный возврат"),
+                Defective = g.Count(p => p.IsDefective)
+            })
+            .OrderByDescending(d => d.Revenue)
+            .Take(10)
+            .ToList();
+
+        // Данные по цветам
+        colorData = allProducts
+            .Where(p => !string.IsNullOrWhiteSpace(p.Color))
+            .GroupBy(p => p.Color)
+            .Select(g => new AnalyticsData
+            {
+                Label = g.Key ?? "Без цвета",
+                Balance = g.Sum(p => (p.Status == "В наличии" || p.Status == "Ожидается" || p.Status == "Отправлено") ? p.PurchasePrice : 0),
+                Revenue = g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice),
+                Profit = g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice - p.PurchasePrice),
+                Margin = g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice) > 0
+                    ? (g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice - p.PurchasePrice) / g.Where(p => p.Status == "Продано").Sum(p => p.SalePrice)) * 100
+                    : 0,
+                Costs = g.Sum(p => p.PurchasePrice),
+                Units = g.Count(),
+                Returns = g.Count(p => p.Status == "Возврат" || p.Status == "Частичный возврат"),
+                Defective = g.Count(p => p.IsDefective)
+            })
+            .OrderByDescending(d => d.Revenue)
+            .Take(10)
+            .ToList();
+    }
+
+    private async Task RenderCharts()
+    {
+        try
+        {
+            Console.WriteLine($"RenderCharts called. Category data count: {categoryData.Count}, Model data count: {modelData.Count}, Color data count: {colorData.Count}");
+
+            if (categoryData.Any())
+            {
+                Console.WriteLine("Rendering category chart...");
+                await JSRuntime.InvokeVoidAsync("renderAnalyticsChart", "categoryChart",
+                    JsonSerializer.Serialize(categoryData.Select(d => d.Label).ToList()),
+                    JsonSerializer.Serialize(categoryData.Select(d => (double)d.Balance).ToList()),
+                    JsonSerializer.Serialize(categoryData.Select(d => (double)d.Revenue).ToList()),
+                    JsonSerializer.Serialize(categoryData.Select(d => (double)d.Profit).ToList()),
+                    JsonSerializer.Serialize(categoryData.Select(d => (double)d.Margin).ToList()),
+                    JsonSerializer.Serialize(categoryData.Select(d => (double)d.Costs).ToList()),
+                    JsonSerializer.Serialize(categoryData.Select(d => d.Units).ToList()),
+                    JsonSerializer.Serialize(categoryData.Select(d => d.Returns).ToList()),
+                    JsonSerializer.Serialize(categoryData.Select(d => d.Defective).ToList())
+                );
+                Console.WriteLine("Category chart rendered successfully");
+            }
+            else
+            {
+                Console.WriteLine("No category data to display");
+            }
+
+            if (modelData.Any())
+            {
+                Console.WriteLine("Rendering model chart...");
+                await JSRuntime.InvokeVoidAsync("renderAnalyticsChart", "modelChart",
+                    JsonSerializer.Serialize(modelData.Select(d => d.Label).ToList()),
+                    JsonSerializer.Serialize(modelData.Select(d => (double)d.Balance).ToList()),
+                    JsonSerializer.Serialize(modelData.Select(d => (double)d.Revenue).ToList()),
+                    JsonSerializer.Serialize(modelData.Select(d => (double)d.Profit).ToList()),
+                    JsonSerializer.Serialize(modelData.Select(d => (double)d.Margin).ToList()),
+                    JsonSerializer.Serialize(modelData.Select(d => (double)d.Costs).ToList()),
+                    JsonSerializer.Serialize(modelData.Select(d => d.Units).ToList()),
+                    JsonSerializer.Serialize(modelData.Select(d => d.Returns).ToList()),
+                    JsonSerializer.Serialize(modelData.Select(d => d.Defective).ToList())
+                );
+                Console.WriteLine("Model chart rendered successfully");
+            }
+            else
+            {
+                Console.WriteLine("No model data to display");
+            }
+
+            if (colorData.Any())
+            {
+                Console.WriteLine("Rendering color chart...");
+                await JSRuntime.InvokeVoidAsync("renderAnalyticsChart", "colorChart",
+                    JsonSerializer.Serialize(colorData.Select(d => d.Label).ToList()),
+                    JsonSerializer.Serialize(colorData.Select(d => (double)d.Balance).ToList()),
+                    JsonSerializer.Serialize(colorData.Select(d => (double)d.Revenue).ToList()),
+                    JsonSerializer.Serialize(colorData.Select(d => (double)d.Profit).ToList()),
+                    JsonSerializer.Serialize(colorData.Select(d => (double)d.Margin).ToList()),
+                    JsonSerializer.Serialize(colorData.Select(d => (double)d.Costs).ToList()),
+                    JsonSerializer.Serialize(colorData.Select(d => d.Units).ToList()),
+                    JsonSerializer.Serialize(colorData.Select(d => d.Returns).ToList()),
+                    JsonSerializer.Serialize(colorData.Select(d => d.Defective).ToList())
+                );
+                Console.WriteLine("Color chart rendered successfully");
+            }
+            else
+            {
+                Console.WriteLine("No color data to display");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rendering charts: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Получено" => "bg-success",
+            "Отправлено" => "bg-info",
+            "Возврат" => "bg-danger",
+            "Частичный возврат" => "bg-warning",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusText(string status)
+    {
+        return status switch
+        {
+            "Получено" => "ПРОДАНО ✓",
+            "Отправлено" => "В ПУТИ",
+            "Возврат" => "ВОЗВРАТ",
+            "Частичный возврат" => "ЧАС. ВОЗВРАТ",
+            _ => status
+        };
+    }
+
+    private string GetProductStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "В наличии" => "bg-success",
+            "Ожидается" => "bg-warning",
+            "Отправлено" => "bg-info",
+            "Продано" => "bg-primary",
+            _ => "bg-secondary"
+        };
+    }
+
+    // Вспомогательные классы
+    private class SaleInfo
+    {
+        public string Buyer { get; set; } = string.Empty;
+        public DateTime? SaleDate { get; set; }
+        public decimal TotalAmount { get; set; }
+        public int ProductCount { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+
+    private class CategoryStat
+    {
+        public string CategoryName { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public double Percentage { get; set; }
+    }
+
+    private class AnalyticsData
+    {
+        public string Label { get; set; } = string.Empty;
+        public decimal Balance { get; set; }
+        public decimal Revenue { get; set; }
+        public decimal Profit { get; set; }
+        public decimal Margin { get; set; }
+        public decimal Costs { get; set; }
+        public int Units { get; set; }
+        public int Returns { get; set; }
+        public int Defective { get; set; }
+    }
+}

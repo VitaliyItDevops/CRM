@@ -1,0 +1,44 @@
+@page "/logout"
+@using Microsoft.AspNetCore.Identity
+@using bryx_CRM.Data.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Выход</PageTitle>
+
+<div class="logout-container">
+    <div class="logout-card">
+        <h3>⏳ Выходим из системы...</h3>
+    </div>
+</div>
+
+<style>
+    .logout-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .logout-card {
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        text-align: center;
+    }
+
+    .logout-card h3 {
+        margin: 0;
+        color: #2d3748;
+    }
+</style>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await SignInManager.SignOutAsync();
+        NavigationManager.NavigateTo("/login", forceLoad: true);
+    }
+}

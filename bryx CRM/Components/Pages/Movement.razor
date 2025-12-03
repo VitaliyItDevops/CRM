@@ -1,0 +1,759 @@
+@page "/movement"
+@rendermode InteractiveServer
+@using bryx_CRM.Data
+@using bryx_CRM.Data.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+
+<PageTitle>Движение</PageTitle>
+
+<h3>Движение товаров</h3>
+
+@if (sales == null)
+{
+    <p>Загрузка...</p>
+}
+else if (!sales.Any())
+{
+    <p class="no-sales">Нет товаров в пути</p>
+}
+else
+{
+    <div class="sales-list">
+        @foreach (var sale in sales)
+        {
+            <div class="sale-card @(expandedSaleId == sale.Id ? "expanded" : "")">
+                <div class="sale-header" @onclick="@(() => ToggleExpand(sale.Id))">
+                    <div class="sale-info">
+                        <h4>@(!string.IsNullOrEmpty(sale.SoldThrough) ? sale.SoldThrough : "Прямая продажа") • @sale.Buyer • @sale.TotalAmount.ToString("N0") ₽</h4>
+                        <div class="sale-details">
+                            <span><strong>Дата продажи:</strong> @sale.SaleDate.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                            @if (!string.IsNullOrEmpty(sale.TTN))
+                            {
+                                <span><strong>ТТН:</strong> @sale.TTN</span>
+                            }
+                            <span class="status-badge">@sale.Status</span>
+                        </div>
+                    </div>
+                    <div class="expand-icon">
+                        @if (expandedSaleId == sale.Id)
+                        {
+                            <span>▼</span>
+                        }
+                        else
+                        {
+                            <span>▶</span>
+                        }
+                    </div>
+                </div>
+
+                @if (expandedSaleId == sale.Id)
+                {
+                    <div class="sale-content">
+                        <h5>Товары в отправлении:</h5>
+                        <div class="products-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Название</th>
+                                        <th>Цвет</th>
+                                        <th>Категория</th>
+                                        <th>Поставщик</th>
+                                        <th>Цена продажи</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var product in sale.Products)
+                                    {
+                                        <tr>
+                                            <td>@product.Name</td>
+                                            <td>@(product.Color ?? "-")</td>
+                                            <td>@product.Category</td>
+                                            <td>@product.Supplier</td>
+                                            <td>@product.SalePrice.ToString("N0") ₽</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="actions-section">
+                            <button class="btn-confirm" @onclick="@(() => ShowConfirmDeliveryModal(sale))">
+                                ✓ Подтвердить получение
+                            </button>
+                            <button class="btn-return" @onclick="@(() => ShowReturnModal(sale))">
+                                ↩ Оформить возврат
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@* Модальное окно подтверждения получения *@
+@if (showConfirmDeliveryModal && selectedSale != null)
+{
+    <div class="modal-overlay" @onclick="CloseConfirmDeliveryModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Подтвердить получение товара</h4>
+
+            <div class="sale-summary">
+                <p><strong>Покупатель:</strong> @selectedSale.Buyer</p>
+                <p><strong>Товаров:</strong> @selectedSale.Products.Count шт.</p>
+                <p><strong>Сумма:</strong> @selectedSale.TotalAmount.ToString("N0") ₽</p>
+            </div>
+
+            <p class="warning-text">Вы подтверждаете, что клиент получил все товары?</p>
+
+            @if (!string.IsNullOrEmpty(confirmError))
+            {
+                <div class="error-message">@confirmError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseConfirmDeliveryModal">Отмена</button>
+                <button class="btn-save" @onclick="ConfirmDelivery">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Модальное окно возврата *@
+@if (showReturnModal && selectedSale != null)
+{
+    <div class="modal-overlay" @onclick="CloseReturnModal">
+        <div class="modal-content large" @onclick:stopPropagation="true">
+            <h4>Оформление возврата</h4>
+
+            <div class="sale-summary">
+                <p><strong>Покупатель:</strong> @selectedSale.Buyer</p>
+                <p><strong>Дата продажи:</strong> @selectedSale.SaleDate.ToLocalTime().ToString("dd.MM.yyyy")</p>
+            </div>
+
+            <h5>Выберите товары для возврата:</h5>
+            <div class="return-products-list">
+                @foreach (var product in selectedSale.Products)
+                {
+                    <div class="return-product-item">
+                        <label class="checkbox-label">
+                            <input type="checkbox"
+                                   checked="@returnSelectedProducts.Contains(product.Id)"
+                                   @onchange="@(() => ToggleReturnProduct(product.Id))" />
+                            <div class="product-info">
+                                <strong>@product.Name</strong>
+                                @if (!string.IsNullOrEmpty(product.Color))
+                                {
+                                    <span class="product-color">(@product.Color)</span>
+                                }
+                                <span class="product-price">- @product.SalePrice.ToString("N0") ₽</span>
+                            </div>
+                        </label>
+                    </div>
+                }
+            </div>
+
+            <div class="return-actions">
+                <button class="btn-select-all" @onclick="SelectAllProducts">Выбрать все</button>
+                <button class="btn-deselect-all" @onclick="DeselectAllProducts">Снять все</button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(returnError))
+            {
+                <div class="error-message">@returnError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseReturnModal">Отмена</button>
+                <button class="btn-return-confirm"
+                        @onclick="ProcessReturn"
+                        disabled="@(!returnSelectedProducts.Any())">
+                    Оформить возврат (@returnSelectedProducts.Count шт.)
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .no-sales {
+        text-align: center;
+        color: #6c757d;
+        padding: 40px;
+        font-style: italic;
+    }
+
+    .sales-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .sale-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+
+        .sale-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .sale-card.expanded {
+            border-color: #667eea;
+        }
+
+    .sale-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+        .sale-header:hover {
+            background: #f8f9fa;
+        }
+
+    .sale-info h4 {
+        margin: 0 0 10px 0;
+        color: #212529;
+        font-size: 18px;
+    }
+
+    .sale-details {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        font-size: 14px;
+        color: #6c757d;
+    }
+
+    .expand-icon {
+        font-size: 20px;
+        color: #667eea;
+        font-weight: bold;
+    }
+
+    .sale-content {
+        padding: 0 20px 20px 20px;
+        border-top: 1px solid #dee2e6;
+        animation: slideDown 0.3s ease;
+    }
+
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .sale-content h5 {
+        margin: 15px 0 10px 0;
+        color: #495057;
+        font-size: 16px;
+    }
+
+    .products-table {
+        overflow-x: auto;
+        margin-bottom: 20px;
+    }
+
+        .products-table table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .products-table thead {
+            background: #e9ecef;
+        }
+
+        .products-table th {
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            font-size: 13px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .products-table td {
+            padding: 10px;
+            color: #212529;
+            font-size: 14px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .products-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .actions-section {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .btn-confirm {
+        background: #198754;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+        .btn-confirm:hover {
+            background: #157347;
+            transform: scale(1.02);
+        }
+
+    .btn-return {
+        background: #fd7e14;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+        .btn-return:hover {
+            background: #e36209;
+            transform: scale(1.02);
+        }
+
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+        .modal-content.large {
+            max-width: 700px;
+        }
+
+        .modal-content h4 {
+            margin: 0 0 20px 0;
+            color: #212529;
+        }
+
+        .modal-content h5 {
+            margin: 20px 0 10px 0;
+            color: #495057;
+            font-size: 16px;
+        }
+
+    .sale-summary {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+
+        .sale-summary p {
+            margin: 5px 0;
+            color: #495057;
+        }
+
+    .warning-text {
+        color: #856404;
+        background: #fff3cd;
+        padding: 12px;
+        border-radius: 5px;
+        border: 1px solid #ffecb5;
+        margin-bottom: 20px;
+    }
+
+    .return-products-list {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 10px;
+        background: #f8f9fa;
+    }
+
+    .return-product-item {
+        padding: 10px;
+        background: white;
+        border-radius: 5px;
+        margin-bottom: 8px;
+        border: 1px solid #dee2e6;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+    }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+    .product-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .product-color {
+        color: #9933cc;
+        font-weight: 500;
+    }
+
+    .product-price {
+        color: #198754;
+        font-weight: 600;
+    }
+
+    .return-actions {
+        display: flex;
+        gap: 10px;
+        margin: 15px 0;
+    }
+
+    .btn-select-all, .btn-deselect-all {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .btn-select-all {
+        background: #0d6efd;
+        color: white;
+    }
+
+        .btn-select-all:hover {
+            background: #0b5ed7;
+        }
+
+    .btn-deselect-all {
+        background: #6c757d;
+        color: white;
+    }
+
+        .btn-deselect-all:hover {
+            background: #5a6268;
+        }
+
+    .error-message {
+        background: #f8d7da;
+        color: #842029;
+        padding: 12px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        border: 1px solid #f5c2c7;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+
+    .btn-cancel, .btn-save, .btn-return-confirm {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .btn-cancel {
+        background: #6c757d;
+        color: white;
+    }
+
+        .btn-cancel:hover {
+            background: #5a6268;
+        }
+
+    .btn-save {
+        background: #198754;
+        color: white;
+    }
+
+        .btn-save:hover {
+            background: #157347;
+        }
+
+    .btn-return-confirm {
+        background: #fd7e14;
+        color: white;
+    }
+
+        .btn-return-confirm:hover {
+            background: #e36209;
+        }
+
+        .btn-return-confirm:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+</style>
+
+@code {
+    private List<Sale>? sales = null;
+    private int? expandedSaleId = null;
+
+    // Модальное окно подтверждения получения
+    private bool showConfirmDeliveryModal = false;
+    private Sale? selectedSale = null;
+    private string confirmError = "";
+
+    // Модальное окно возврата
+    private bool showReturnModal = false;
+    private HashSet<int> returnSelectedProducts = new HashSet<int>();
+    private string returnError = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSales();
+    }
+
+    private async Task LoadSales()
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        sales = await context.Sales
+            .Include(s => s.Products)
+            .Where(s => s.Status == "Отправлено")
+            .OrderByDescending(s => s.SaleDate)
+            .ToListAsync();
+    }
+
+    private void ToggleExpand(int saleId)
+    {
+        if (expandedSaleId == saleId)
+            expandedSaleId = null;
+        else
+            expandedSaleId = saleId;
+
+        StateHasChanged();
+    }
+
+    private void ShowConfirmDeliveryModal(Sale sale)
+    {
+        selectedSale = sale;
+        confirmError = "";
+        showConfirmDeliveryModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseConfirmDeliveryModal()
+    {
+        showConfirmDeliveryModal = false;
+        selectedSale = null;
+        confirmError = "";
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDelivery()
+    {
+        if (selectedSale == null) return;
+
+        confirmError = "";
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Обновляем статус продажи
+            var sale = await context.Sales
+                .Include(s => s.Products)
+                .FirstOrDefaultAsync(s => s.Id == selectedSale.Id);
+
+            if (sale == null)
+            {
+                confirmError = "Продажа не найдена!";
+                StateHasChanged();
+                return;
+            }
+
+            sale.Status = "Получено";
+            sale.UpdatedAt = DateTime.UtcNow;
+
+            // Обновляем статус всех товаров в продаже
+            foreach (var product in sale.Products)
+            {
+                product.Status = "Продано";
+                product.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await context.SaveChangesAsync();
+
+            // Обновляем список продаж
+            await LoadSales();
+
+            CloseConfirmDeliveryModal();
+        }
+        catch (Exception ex)
+        {
+            confirmError = $"Ошибка при подтверждении: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private void ShowReturnModal(Sale sale)
+    {
+        selectedSale = sale;
+        returnSelectedProducts.Clear();
+        returnError = "";
+        showReturnModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseReturnModal()
+    {
+        showReturnModal = false;
+        selectedSale = null;
+        returnSelectedProducts.Clear();
+        returnError = "";
+        StateHasChanged();
+    }
+
+    private void ToggleReturnProduct(int productId)
+    {
+        if (returnSelectedProducts.Contains(productId))
+            returnSelectedProducts.Remove(productId);
+        else
+            returnSelectedProducts.Add(productId);
+
+        StateHasChanged();
+    }
+
+    private void SelectAllProducts()
+    {
+        if (selectedSale != null)
+        {
+            returnSelectedProducts = selectedSale.Products.Select(p => p.Id).ToHashSet();
+            StateHasChanged();
+        }
+    }
+
+    private void DeselectAllProducts()
+    {
+        returnSelectedProducts.Clear();
+        StateHasChanged();
+    }
+
+    private async Task ProcessReturn()
+    {
+        if (selectedSale == null || !returnSelectedProducts.Any()) return;
+
+        returnError = "";
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var sale = await context.Sales
+                .Include(s => s.Products)
+                .FirstOrDefaultAsync(s => s.Id == selectedSale.Id);
+
+            if (sale == null)
+            {
+                returnError = "Продажа не найдена!";
+                StateHasChanged();
+                return;
+            }
+
+            // Возвращаем выбранные товары
+            var productsToReturn = sale.Products.Where(p => returnSelectedProducts.Contains(p.Id)).ToList();
+
+            foreach (var product in productsToReturn)
+            {
+                product.Status = "В наличии";
+                product.SaleId = null;
+                product.Buyer = null;
+                product.SalePrice = 0;
+                product.SaleDate = null;
+                product.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Если все товары возвращены, меняем статус продажи
+            var remainingProducts = sale.Products.Where(p => !returnSelectedProducts.Contains(p.Id)).Count();
+
+            if (remainingProducts == 0)
+            {
+                // Полный возврат
+                sale.Status = "Возврат";
+            }
+            else
+            {
+                // Частичный возврат
+                sale.Status = "Частичный возврат";
+            }
+
+            sale.UpdatedAt = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+
+            // Обновляем список продаж
+            await LoadSales();
+
+            CloseReturnModal();
+        }
+        catch (Exception ex)
+        {
+            returnError = $"Ошибка при оформлении возврата: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+}
