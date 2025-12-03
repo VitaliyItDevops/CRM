@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is **bryx CRM** - a warehouse and inventory management system built with ASP.NET Core Blazor Server and PostgreSQL. The application is in Russian and manages products, categories, sales, purchases, and warehouse movements.
 
 **Technology Stack:**
-- .NET 10.0 (Blazor Server with Interactive Server Components)
-- Entity Framework Core 10.0
-- PostgreSQL (via Npgsql.EntityFrameworkCore.PostgreSQL 10.0)
+- .NET 9.0 (Blazor Server with Interactive Server Components)
+- Entity Framework Core 9.0
+- PostgreSQL (via Npgsql.EntityFrameworkCore.PostgreSQL 9.0)
 - Bootstrap for UI styling
 
 ## Database Architecture
