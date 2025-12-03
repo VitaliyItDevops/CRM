@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Настройка порта для Railway (или другого облачного провайдера)
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5092";
+Console.WriteLine($"🚀 Starting application on port: {port}");
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // Add services to the container.
@@ -139,7 +140,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found");
-app.UseHttpsRedirection();
+
+// HTTPS редирект убран - Railway обрабатывает HTTPS на уровне прокси
+// app.UseHttpsRedirection();
 
 // Middleware для аутентификации и авторизации
 app.UseAuthentication();
