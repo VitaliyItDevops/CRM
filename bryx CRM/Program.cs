@@ -19,11 +19,30 @@ builder.Services.AddRazorComponents()
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
+Console.WriteLine($"🔍 DATABASE_URL environment variable: {(Environment.GetEnvironmentVariable("DATABASE_URL") != null ? "EXISTS" : "NOT FOUND")}");
+Console.WriteLine($"🔍 Using connection string format: {(connectionString?.StartsWith("postgres") == true ? "Railway format (postgres://)" : "Npgsql format")}");
+
 // Преобразование DATABASE_URL формата Railway в ConnectionString для Npgsql
-if (connectionString?.StartsWith("postgres://") == true)
+// Railway может использовать postgres:// или postgresql://
+if (connectionString?.StartsWith("postgres://") == true || connectionString?.StartsWith("postgresql://") == true)
 {
-    var uri = new Uri(connectionString);
-    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={uri.UserInfo.Split(':')[0]};Password={uri.UserInfo.Split(':')[1]};SSL Mode=Require;Trust Server Certificate=true";
+    try
+    {
+        var uri = new Uri(connectionString);
+        var userInfo = uri.UserInfo.Split(':');
+        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+        Console.WriteLine($"✅ Converted Railway DATABASE_URL to Npgsql format");
+        Console.WriteLine($"🔗 Host: {uri.Host}, Port: {uri.Port}, Database: {uri.AbsolutePath.TrimStart('/')}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error parsing DATABASE_URL: {ex.Message}");
+        throw;
+    }
+}
+else
+{
+    Console.WriteLine($"⚠️ Using local connection string (not Railway format)");
 }
 
 builder.Services.AddPooledDbContextFactory<ApplicationDbContext>(options =>
