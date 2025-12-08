@@ -1,4 +1,4 @@
-@page "/purchase"
+﻿@page "/purchase"
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using bryx_CRM.Data
@@ -229,26 +229,16 @@
             {
                 <div class="form-group">
                     <label>Подкатегория:</label>
-                    @if (subcategories.Any())
-                    {
-                        <select @bind="selectedSubcategory" class="form-select">
+                    <div class="subcategory-select-container">
+                        <select @bind="selectedSubcategory" class="form-select subcategory-select">
                             <option value="">-- Выберите подкатегорию --</option>
                             @foreach (var subcategory in subcategories)
                             {
                                 <option value="@subcategory">@subcategory</option>
                             }
-                            <option value="__custom__">+ Ввести вручную</option>
                         </select>
-
-                        @if (selectedSubcategory == "__custom__")
-                        {
-                            <input type="text" @bind="customSubcategory" placeholder="Введите подкатегорию" class="form-input" style="margin-top: 10px;" />
-                        }
-                    }
-                    else
-                    {
-                        <input type="text" @bind="customSubcategory" placeholder="Введите подкатегорию (необязательно)" class="form-input" />
-                    }
+                        <button class="btn-add-subcategory" @onclick="ShowAddSubcategoryModal" type="button">+ Добавить</button>
+                    </div>
                 </div>
             }
 
@@ -379,6 +369,41 @@
     </div>
 }
 
+@* Модальное окно добавления подкатегории *@
+@if (showAddSubcategoryModal)
+{
+    <div class="modal-overlay" @onclick="CloseAddSubcategoryModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Добавить подкатегорию</h4>
+
+            <div class="form-group">
+                <label>Категория:</label>
+                <input type="text" value="@selectedCategory" readonly class="form-input readonly-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Название подкатегории: <span class="required">*</span></label>
+                <input type="text" @bind="newSubcategoryName" placeholder="Например: Беспроводные" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Описание (необязательно):</label>
+                <textarea @bind="newSubcategoryDescription" placeholder="Описание подкатегории..." class="form-textarea" rows="3"></textarea>
+            </div>
+
+            @if (!string.IsNullOrEmpty(subcategoryError))
+            {
+                <div class="error-message">@subcategoryError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseAddSubcategoryModal">Отмена</button>
+                <button class="btn-save" @onclick="SaveSubcategory">Сохранить</button>
+            </div>
+        </div>
+    </div>
+}
+
 @* Модальное окно подтверждения удаления *@
 @if (showDeleteConfirmModal && purchaseToDelete != null)
 {
@@ -426,13 +451,13 @@
     .purchases-section {
         margin-bottom: 40px;
         padding: 20px;
-        background: #f8f9fa;
+        background: var(--apple-bg-secondary);
         border-radius: 8px;
     }
 
         .purchases-section h4 {
             margin: 0 0 20px 0;
-            color: #212529;
+            color: var(--apple-text-primary);
         }
 
     .purchases-list {
@@ -442,8 +467,8 @@
     }
 
     .purchase-card {
-        background: white;
-        border: 1px solid #dee2e6;
+        background: var(--apple-gradient-card);
+        border: 1px solid var(--apple-border);
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -455,7 +480,7 @@
         }
 
         .purchase-card.expanded {
-            border-color: #667eea;
+            border-color: var(--apple-blue);
         }
 
     .purchase-header {
@@ -468,12 +493,12 @@
     }
 
         .purchase-header:hover {
-            background: #f8f9fa;
+            background: var(--apple-bg-secondary);
         }
 
     .purchase-info h4 {
         margin: 0 0 10px 0;
-        color: #212529;
+        color: var(--apple-text-primary);
         font-size: 18px;
     }
 
@@ -482,7 +507,7 @@
         gap: 20px;
         flex-wrap: wrap;
         font-size: 14px;
-        color: #6c757d;
+        color: var(--apple-text-secondary);
     }
 
         .purchase-details span {
@@ -492,26 +517,26 @@
 
     .expand-icon {
         font-size: 20px;
-        color: #667eea;
+        color: var(--apple-blue);
         font-weight: bold;
     }
 
     .purchase-content {
         padding: 0 20px 20px 20px;
-        border-top: 1px solid #dee2e6;
+        border-top: 1px solid var(--apple-border);
         animation: slideDown 0.3s ease;
     }
 
     .purchase-comment {
-        background: #fff3cd;
+        background: rgba(255, 159, 10, 0.2);
         border-left: 4px solid #ffc107;
         padding: 12px 15px;
         margin: 15px 0;
-        border-radius: 4px;
+        border-radius: 8px;
     }
 
         .purchase-comment strong {
-            color: #664d03;
+            color: var(--apple-orange);
         }
 
     .status-badge {
@@ -524,18 +549,18 @@
     }
 
     .status-ожидается {
-        background: #fff3cd;
-        color: #664d03;
+        background: rgba(255, 159, 10, 0.2);
+        color: var(--apple-orange);
     }
 
     .status-получено {
-        background: #d1e7dd;
+        background: rgba(48, 209, 88, 0.2);
         color: #0a3622;
     }
 
     .status-отменено {
-        background: #f8d7da;
-        color: #842029;
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
     }
 
     @@keyframes slideDown {
@@ -558,7 +583,7 @@
 
     .purchase-content h5 {
         margin: 15px 0 10px 0;
-        color: #495057;
+        color: var(--apple-text-primary);
         font-size: 16px;
     }
 
@@ -569,28 +594,28 @@
         .products-table table {
             width: 100%;
             border-collapse: collapse;
-            background: #f8f9fa;
-            border-radius: 5px;
+            background: var(--apple-bg-secondary);
+            border-radius: 10px;
         }
 
         .products-table thead {
-            background: #e9ecef;
+            background: var(--apple-bg-tertiary);
         }
 
         .products-table th {
             padding: 10px;
             text-align: left;
             font-weight: 600;
-            color: #495057;
+            color: var(--apple-text-primary);
             font-size: 13px;
-            border-bottom: 2px solid #dee2e6;
+            border-bottom: 2px solid var(--apple-border);
         }
 
         .products-table td {
             padding: 10px;
-            color: #212529;
+            color: var(--apple-text-primary);
             font-size: 14px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--apple-border);
         }
 
         .products-table tbody tr:last-child td {
@@ -615,7 +640,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #495057;
+            color: var(--apple-text-primary);
         }
 
     .filter-group {
@@ -627,16 +652,16 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #495057;
+            color: var(--apple-text-primary);
             font-size: 13px;
         }
 
     .btn-reset-filters {
-        background: #6c757d;
+        background: var(--apple-text-secondary);
         color: white;
         border: none;
         padding: 10px 20px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -645,22 +670,22 @@
     }
 
         .btn-reset-filters:hover {
-            background: #5a6268;
+            background: var(--apple-text-secondary);
         }
 
     .no-products {
         text-align: center;
-        color: #6c757d;
+        color: var(--apple-text-secondary);
         padding: 40px;
         font-style: italic;
     }
 
     .btn-confirm {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
         border: none;
         padding: 12px 20px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -668,16 +693,16 @@
     }
 
         .btn-confirm:hover {
-            background: #157347;
+            background: var(--apple-green);
             transform: scale(1.02);
         }
 
     .btn-delete {
-        background: #dc3545;
+        background: var(--apple-red);
         color: white;
         border: none;
         padding: 12px 20px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -685,16 +710,16 @@
     }
 
         .btn-delete:hover {
-            background: #bb2d3b;
+            background: var(--apple-red);
             transform: scale(1.02);
         }
 
     .btn-delete-confirm {
-        background: #dc3545;
+        background: var(--apple-red);
         color: white;
         padding: 10px 24px;
         border: none;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -702,37 +727,37 @@
     }
 
         .btn-delete-confirm:hover {
-            background: #bb2d3b;
+            background: var(--apple-red);
         }
 
     .warning-message {
-        background: #fff3cd;
-        border: 1px solid #ffecb5;
+        background: rgba(255, 159, 10, 0.2);
+        border: 1px solid rgba(255, 159, 10, 0.3);
         padding: 15px;
-        border-radius: 5px;
+        border-radius: 10px;
         margin-bottom: 20px;
     }
 
         .warning-message p {
             margin: 5px 0;
-            color: #664d03;
+            color: var(--apple-orange);
             font-weight: 600;
         }
 
     .product-summary {
-        background: #f8f9fa;
+        background: var(--apple-bg-secondary);
         padding: 15px;
-        border-radius: 5px;
+        border-radius: 10px;
         margin-bottom: 20px;
     }
 
         .product-summary p {
             margin: 5px 0;
-            color: #495057;
+            color: var(--apple-text-primary);
         }
 
     .btn-add-purchase {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--apple-gradient-blue);
         color: white;
         border: none;
         padding: 12px 28px;
@@ -745,7 +770,7 @@
     }
 
         .btn-add-purchase:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            background: var(--apple-gradient-blue);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
@@ -764,7 +789,7 @@
     }
 
     .modal-content {
-        background: white;
+        background: var(--apple-gradient-card);
         padding: 30px;
         border-radius: 8px;
         width: 90%;
@@ -780,7 +805,7 @@
 
         .modal-content h4 {
             margin: 0 0 20px 0;
-            color: #212529;
+            color: var(--apple-text-primary);
         }
 
     .form-group {
@@ -791,7 +816,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #495057;
+            color: var(--apple-text-primary);
         }
 
     .form-row {
@@ -801,34 +826,34 @@
     }
 
     .required {
-        color: #dc3545;
+        color: var(--apple-red);
     }
 
     .calculated {
-        color: #198754;
+        color: var(--apple-green);
         font-style: italic;
         font-size: 12px;
     }
 
     .readonly-input {
-        background-color: #e9ecef;
+        background-color: var(--apple-bg-tertiary);
         cursor: not-allowed;
-        color: #495057;
+        color: var(--apple-text-primary);
         font-weight: 600;
     }
 
     .form-input, .form-select, .form-textarea {
         width: 100%;
         padding: 10px 12px;
-        border: 1px solid #ced4da;
-        border-radius: 5px;
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
         font-size: 14px;
         box-sizing: border-box;
     }
 
         .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
-            border-color: #0d6efd;
+            border-color: var(--apple-blue);
             box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
@@ -848,11 +873,11 @@
     }
 
     .btn-add-supplier {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
         border: none;
         padding: 10px 16px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -861,16 +886,43 @@
     }
 
         .btn-add-supplier:hover {
-            background: #157347;
+            background: var(--apple-green);
+        }
+
+    .subcategory-select-container {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .subcategory-select {
+        flex: 1;
+    }
+
+    .btn-add-subcategory {
+        background: var(--apple-blue);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: all 0.3s ease;
+    }
+
+        .btn-add-subcategory:hover {
+            background: var(--apple-blue);
         }
 
     .error-message {
-        background: #f8d7da;
-        color: #842029;
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
         padding: 12px;
-        border-radius: 5px;
+        border-radius: 10px;
         margin-bottom: 15px;
-        border: 1px solid #f5c2c7;
+        border: 1px solid rgba(255, 69, 58, 0.3);
         font-size: 14px;
         font-weight: 500;
     }
@@ -884,28 +936,28 @@
     .btn-cancel, .btn-save {
         padding: 10px 24px;
         border: none;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
     }
 
     .btn-cancel {
-        background: #6c757d;
+        background: var(--apple-text-secondary);
         color: white;
     }
 
         .btn-cancel:hover {
-            background: #5a6268;
+            background: var(--apple-text-secondary);
         }
 
     .btn-save {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
     }
 
         .btn-save:hover {
-            background: #157347;
+            background: var(--apple-green);
         }
 </style>
 
@@ -916,7 +968,6 @@
     private List<string>? colorsInProduct = null;
     private List<string> subcategories = new List<string>();
     private string selectedSubcategory = "";
-    private string customSubcategory = "";
 
     // Покупки на поступлении
     private string selectedViewCategory = "";
@@ -973,6 +1024,12 @@
     private string newSupplierName = "";
     private string supplierError = "";
 
+    // Модальное окно добавления подкатегории
+    private bool showAddSubcategoryModal = false;
+    private string newSubcategoryName = "";
+    private string newSubcategoryDescription = "";
+    private string subcategoryError = "";
+
     // Модальное окно удаления закупки
     private bool showDeleteConfirmModal = false;
     private PurchaseModel? purchaseToDelete = null;
@@ -1013,10 +1070,9 @@
         }
 
         using var context = await DbContextFactory.CreateDbContextAsync();
-        subcategories = await context.Products
-            .Where(p => p.Category == selectedCategory && !string.IsNullOrEmpty(p.Subcategory))
-            .Select(p => p.Subcategory!)
-            .Distinct()
+        subcategories = await context.Subcategories
+            .Where(s => s.CategoryName == selectedCategory)
+            .Select(s => s.Name)
             .OrderBy(s => s)
             .ToListAsync();
 
@@ -1207,7 +1263,6 @@
         await LoadSubcategories();
 
         selectedSubcategory = "";
-        customSubcategory = "";
         productNameSelection = "";
         showCustomProductName = false;
         customProductName = "";
@@ -1287,7 +1342,6 @@
     {
         selectedCategory = "";
         selectedSubcategory = "";
-        customSubcategory = "";
         subcategories = new List<string>();
         productNameSelection = "";
         showCustomProductName = false;
@@ -1387,18 +1441,7 @@
             var totalPriceUAH = totalPriceUSD * exchangeRate.Value;
 
             // Определяем финальную подкатегорию
-            string? finalSubcategory = null;
-            if (selectedSubcategory == "__custom__" || !subcategories.Any())
-            {
-                if (!string.IsNullOrWhiteSpace(customSubcategory))
-                {
-                    finalSubcategory = customSubcategory.Trim();
-                }
-            }
-            else if (!string.IsNullOrWhiteSpace(selectedSubcategory))
-            {
-                finalSubcategory = selectedSubcategory;
-            }
+            string? finalSubcategory = !string.IsNullOrWhiteSpace(selectedSubcategory) ? selectedSubcategory : null;
 
             // Создаём запись покупки
             var purchase = new PurchaseModel
@@ -1441,6 +1484,7 @@
                 var product = new Product
                 {
                     Category = selectedCategory,
+                    Subcategory = finalSubcategory,
                     Name = finalProductName,
                     Color = finalColor,
                     PriceInUSD = itemPriceUSD,
@@ -1533,6 +1577,81 @@
         catch (Exception ex)
         {
             supplierError = $"Ошибка при сохранении: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private void ShowAddSubcategoryModal()
+    {
+        showAddSubcategoryModal = true;
+        newSubcategoryName = "";
+        newSubcategoryDescription = "";
+        subcategoryError = "";
+        StateHasChanged();
+    }
+
+    private void CloseAddSubcategoryModal()
+    {
+        showAddSubcategoryModal = false;
+        newSubcategoryName = "";
+        newSubcategoryDescription = "";
+        subcategoryError = "";
+        StateHasChanged();
+    }
+
+    private async Task SaveSubcategory()
+    {
+        subcategoryError = "";
+
+        if (string.IsNullOrWhiteSpace(newSubcategoryName))
+        {
+            subcategoryError = "Введите название подкатегории!";
+            StateHasChanged();
+            return;
+        }
+
+        if (string.IsNullOrEmpty(selectedCategory))
+        {
+            subcategoryError = "Категория не выбрана!";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var trimmedName = newSubcategoryName.Trim();
+
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var exists = await context.Subcategories
+                .AnyAsync(s => s.CategoryName == selectedCategory && s.Name.ToLower() == trimmedName.ToLower());
+
+            if (exists)
+            {
+                subcategoryError = "Подкатегория с таким названием уже существует в этой категории!";
+                StateHasChanged();
+                return;
+            }
+
+            var subcategory = new Subcategory
+            {
+                CategoryName = selectedCategory,
+                Name = trimmedName,
+                Description = string.IsNullOrWhiteSpace(newSubcategoryDescription) ? null : newSubcategoryDescription.Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.Subcategories.Add(subcategory);
+            await context.SaveChangesAsync();
+
+            await LoadSubcategories();
+            selectedSubcategory = trimmedName;
+
+            CloseAddSubcategoryModal();
+        }
+        catch (Exception ex)
+        {
+            subcategoryError = $"Ошибка при сохранении: {ex.Message}";
             StateHasChanged();
         }
     }

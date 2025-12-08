@@ -46,12 +46,13 @@ else
     Console.WriteLine($"⚠️ Using local connection string (not Railway format)");
 }
 
-// Регистрация DbContext для ASP.NET Core Identity
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// Регистрация PooledDbContextFactory для Blazor компонентов
+builder.Services.AddPooledDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Регистрация DbContextFactory для Blazor компонентов
-builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+// Регистрация DbContext для Identity
+// Используем AddDbContextPool для совместимости с PooledDbContextFactory
+builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // Настройка ASP.NET Core Identity

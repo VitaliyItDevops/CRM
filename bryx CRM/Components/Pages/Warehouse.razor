@@ -55,6 +55,7 @@ else
                         <thead>
                             <tr>
                                 <th>Название</th>
+                                <th>Подкатегория</th>
                                 <th>Цвет</th>
                                 <th>Количество</th>
                                 <th>Ожидается</th>
@@ -67,6 +68,7 @@ else
                             {
                                 <tr>
                                     <td class="summary-name">@summary.Name</td>
+                                    <td class="summary-subcategory">@(summary.Subcategory ?? "-")</td>
                                     <td class="summary-color">@(summary.Color ?? "-")</td>
                                     <td class="summary-count">@summary.Count шт</td>
                                     <td class="summary-count">@summary.ExpectedCount шт</td>
@@ -189,6 +191,7 @@ else
                             <tr>
                                 <th>⭐</th>
                                 <th>Название</th>
+                                <th>Подкатегория</th>
                                 <th>Цвет</th>
                                 <th>Цена $</th>
                                 <th>Курс $</th>
@@ -214,6 +217,7 @@ else
                                         </button>
                                     </td>
                                     <td class="product-name">@product.Name</td>
+                                    <td class="product-subcategory">@(product.Subcategory ?? "-")</td>
                                     <td class="product-color">@(product.Color ?? "-")</td>
                                     <td class="price">@(product.PriceInUSD?.ToString("N2") ?? "-") $</td>
                                     <td class="price">@(product.ExchangeRate?.ToString("N2") ?? "-")</td>
@@ -393,8 +397,8 @@ else
     }
 
     .category-card {
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
+        background: var(--apple-bg-secondary);
+        border: 2px solid var(--apple-border);
         border-radius: 8px;
         padding: 30px 20px;
         text-align: center;
@@ -403,8 +407,8 @@ else
     }
 
         .category-card:hover {
-            background: #e9ecef;
-            border-color: #0d6efd;
+            background: var(--apple-bg-tertiary);
+            border-color: var(--apple-blue);
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
@@ -416,11 +420,11 @@ else
 
     .category-card h4 {
         margin: 10px 0 5px 0;
-        color: #212529;
+        color: var(--apple-text-primary);
     }
 
     .item-count {
-        color: #6c757d;
+        color: var(--apple-text-secondary);
         font-size: 14px;
         margin: 0;
     }
@@ -430,11 +434,11 @@ else
     }
 
     .btn-back {
-        background: #6c757d;
+        background: var(--apple-text-secondary);
         color: white;
         border: none;
         padding: 10px 20px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         margin-bottom: 20px;
         font-size: 16px;
@@ -442,7 +446,7 @@ else
     }
 
         .btn-back:hover {
-            background: #5a6268;
+            background: var(--apple-text-secondary);
         }
 
     .summary-section {
@@ -550,12 +554,12 @@ else
 
             .summary-table td.summary-name {
                 font-weight: 600;
-                color: #2d3748;
+                color: var(--apple-text-primary);
                 min-width: 150px;
             }
 
             .summary-table td.summary-color {
-                color: #6c757d;
+                color: var(--apple-text-secondary);
                 font-size: 13px;
             }
 
@@ -568,13 +572,13 @@ else
 
             .summary-table td.summary-price {
                 font-weight: 600;
-                color: #198754;
+                color: var(--apple-green);
                 white-space: nowrap;
             }
 
             .summary-table td.summary-suppliers {
                 font-size: 13px;
-                color: #6c757d;
+                color: var(--apple-text-secondary);
             }
 
         .summary-table tbody tr {
@@ -592,7 +596,7 @@ else
         gap: 15px;
         margin: 20px 0;
         padding: 20px;
-        background: #f8f9fa;
+        background: var(--apple-bg-secondary);
         border-radius: 8px;
     }
 
@@ -605,19 +609,19 @@ else
         .filter-group label {
             font-weight: 600;
             font-size: 14px;
-            color: #495057;
+            color: var(--apple-text-primary);
         }
 
     .filter-input, .filter-select {
         padding: 8px 12px;
-        border: 1px solid #ced4da;
-        border-radius: 5px;
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
         font-size: 14px;
     }
 
         .filter-input:focus, .filter-select:focus {
             outline: none;
-            border-color: #0d6efd;
+            border-color: var(--apple-blue);
             box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
@@ -674,14 +678,14 @@ else
         width: 100%;
         min-width: 600px;
         border-collapse: collapse;
-        background: white;
+        background: var(--apple-gradient-card);
     }
 
         .table th {
-            background: #f8f9fa;
+            background: var(--apple-bg-secondary);
             padding: 12px 8px;
             text-align: left;
-            border-bottom: 2px solid #dee2e6;
+            border-bottom: 2px solid var(--apple-border);
             font-weight: 600;
             white-space: nowrap;
             font-size: 14px;
@@ -692,7 +696,7 @@ else
 
         .table td {
             padding: 12px 8px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--apple-border);
             font-size: 14px;
         }
 
@@ -702,34 +706,34 @@ else
             }
 
             .table td.product-color {
-                color: #6c757d;
+                color: var(--apple-text-secondary);
                 font-size: 13px;
             }
 
             .table td.price {
                 white-space: nowrap;
                 font-weight: 600;
-                color: #198754;
+                color: var(--apple-green);
             }
 
             .table td.date-cell {
                 white-space: nowrap;
                 font-size: 13px;
-                color: #495057;
+                color: var(--apple-text-primary);
                 font-weight: 500;
             }
 
             .table td.supplier {
                 min-width: 120px;
                 font-size: 13px;
-                color: #6c757d;
+                color: var(--apple-text-secondary);
             }
 
             .table td.status {
                 font-size: 13px;
                 font-weight: 600;
                 white-space: nowrap;
-                color: #0d6efd;
+                color: var(--apple-blue);
             }
 
             .table td.defect-cell {
@@ -737,11 +741,11 @@ else
             }
 
         .table tbody tr:hover {
-            background: #f8f9fa;
+            background: var(--apple-bg-secondary);
         }
 
     .defective-row {
-        background: #fff3cd !important;
+        background: rgba(255, 159, 10, 0.2) !important;
     }
 
         .defective-row:hover {
@@ -790,7 +794,7 @@ else
     }
 
     .modal-content {
-        background: white;
+        background: var(--apple-gradient-card);
         padding: 30px;
         border-radius: 8px;
         width: 90%;
@@ -802,10 +806,10 @@ else
 
         .modal-content h4 {
             margin: 0 0 20px 0;
-            color: #212529;
+            color: var(--apple-text-primary);
             position: sticky;
             top: -30px;
-            background: white;
+            background: var(--apple-gradient-card);
             padding: 0 0 15px 0;
             z-index: 1;
         }
@@ -818,31 +822,31 @@ else
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #495057;
+            color: var(--apple-text-primary);
         }
 
     .form-input, .form-textarea {
         width: 100%;
         padding: 10px 12px;
-        border: 1px solid #ced4da;
-        border-radius: 5px;
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
         font-size: 14px;
         box-sizing: border-box;
     }
 
         .form-input:focus, .form-textarea:focus {
             outline: none;
-            border-color: #0d6efd;
+            border-color: var(--apple-blue);
             box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
     .error-message {
-        background: #f8d7da;
-        color: #842029;
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
         padding: 12px;
-        border-radius: 5px;
+        border-radius: 10px;
         margin-bottom: 15px;
-        border: 1px solid #f5c2c7;
+        border: 1px solid rgba(255, 69, 58, 0.3);
         font-size: 14px;
         font-weight: 500;
         animation: shake 0.3s ease;
@@ -910,7 +914,7 @@ else
         justify-content: flex-end;
         position: sticky;
         bottom: -30px;
-        background: white;
+        background: var(--apple-gradient-card);
         padding: 15px 0 0 0;
         margin-top: 20px;
         z-index: 1;
@@ -919,28 +923,28 @@ else
     .btn-cancel, .btn-save {
         padding: 10px 24px;
         border: none;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
     }
 
     .btn-cancel {
-        background: #6c757d;
+        background: var(--apple-text-secondary);
         color: white;
     }
 
         .btn-cancel:hover {
-            background: #5a6268;
+            background: var(--apple-text-secondary);
         }
 
     .btn-save {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
     }
 
         .btn-save:hover {
-            background: #157347;
+            background: var(--apple-green);
         }
 
     .header-actions {
@@ -950,7 +954,7 @@ else
     }
 
     .btn-add-category {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--apple-gradient-blue);
         color: white;
         border: none;
         padding: 12px 28px;
@@ -966,7 +970,7 @@ else
     }
 
         .btn-add-category:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            background: var(--apple-gradient-blue);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
@@ -1012,21 +1016,21 @@ else
     }
 
         .confirm-text strong {
-            color: #dc3545;
+            color: var(--apple-red);
             font-size: 18px;
         }
 
     .confirm-detail {
         font-size: 14px;
-        color: #6c757d;
+        color: var(--apple-text-secondary);
         margin: 10px 0;
     }
 
     .confirm-warning {
-        background: #fff3cd;
-        color: #856404;
+        background: rgba(255, 159, 10, 0.2);
+        color: var(--apple-orange);
         padding: 12px;
-        border-radius: 5px;
+        border-radius: 10px;
         margin: 15px 0;
         font-size: 14px;
         font-weight: 600;
@@ -1034,11 +1038,11 @@ else
     }
 
     .btn-delete-confirm {
-        background: #dc3545;
+        background: var(--apple-red);
         color: white;
         border: none;
         padding: 10px 24px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -1046,7 +1050,7 @@ else
     }
 
         .btn-delete-confirm:hover {
-            background: #bb2d3b;
+            background: var(--apple-red);
         }
 
     /* Мобильная адаптация */
@@ -1267,6 +1271,7 @@ else
     public class ProductSummary
     {
         public string Name { get; set; } = string.Empty;
+        public string? Subcategory { get; set; }
         public string? Color { get; set; }
         public int Count { get; set; }
         public int ExpectedCount { get; set; }
@@ -1546,23 +1551,27 @@ else
 
         var summaries = new List<ProductSummary>();
 
-        // Группируем по Name + Color
+        // Группируем по Name + Subcategory + Color
         foreach (var group in productsInStock.GroupBy(p => new {
             Name = p.Name.Trim().ToLower(),
+            Subcategory = (p.Subcategory ?? "").Trim().ToLower(),
             Color = (p.Color ?? "").Trim().ToLower()
         }))
         {
             var name = group.First().Name;
+            var subcategory = group.First().Subcategory;
             var color = group.First().Color;
 
             var expectedCount = await context.Products
                 .Where(p => p.Name.ToLower() == group.Key.Name
+                    && (p.Subcategory ?? "").ToLower() == group.Key.Subcategory
                     && (p.Color ?? "").ToLower() == group.Key.Color
                     && p.Status == "Ожидается")
                 .CountAsync();
 
             var shippedCount = await context.Products
                 .Where(p => p.Name.ToLower() == group.Key.Name
+                    && (p.Subcategory ?? "").ToLower() == group.Key.Subcategory
                     && (p.Color ?? "").ToLower() == group.Key.Color
                     && p.Status == "Отправлено")
                 .CountAsync();
@@ -1570,6 +1579,7 @@ else
             summaries.Add(new ProductSummary
             {
                 Name = name,
+                Subcategory = subcategory,
                 Color = color,
                 Count = group.Count(),
                 ExpectedCount = expectedCount,
@@ -1581,6 +1591,7 @@ else
         productSummary = summaries
             .OrderByDescending(s => s.Count)
             .ThenBy(s => s.Name)
+            .ThenBy(s => s.Subcategory)
             .ThenBy(s => s.Color)
             .ToList();
     }

@@ -1,4 +1,4 @@
-@page "/movement"
+﻿@page "/movement"
 @rendermode InteractiveServer
 @using bryx_CRM.Data
 @using bryx_CRM.Data.Models
@@ -208,7 +208,7 @@ else
 <style>
     .no-sales {
         text-align: center;
-        color: #6c757d;
+        color: var(--apple-text-secondary);
         padding: 40px;
         font-style: italic;
     }
@@ -220,8 +220,8 @@ else
     }
 
     .sale-card {
-        background: white;
-        border: 1px solid #dee2e6;
+        background: var(--apple-gradient-card);
+        border: 1px solid var(--apple-border);
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -233,7 +233,7 @@ else
         }
 
         .sale-card.expanded {
-            border-color: #667eea;
+            border-color: var(--apple-blue);
         }
 
     .sale-header {
@@ -246,12 +246,12 @@ else
     }
 
         .sale-header:hover {
-            background: #f8f9fa;
+            background: var(--apple-bg-secondary);
         }
 
     .sale-info h4 {
         margin: 0 0 10px 0;
-        color: #212529;
+        color: var(--apple-text-primary);
         font-size: 18px;
     }
 
@@ -260,18 +260,18 @@ else
         gap: 20px;
         flex-wrap: wrap;
         font-size: 14px;
-        color: #6c757d;
+        color: var(--apple-text-secondary);
     }
 
     .expand-icon {
         font-size: 20px;
-        color: #667eea;
+        color: var(--apple-blue);
         font-weight: bold;
     }
 
     .sale-content {
         padding: 0 20px 20px 20px;
-        border-top: 1px solid #dee2e6;
+        border-top: 1px solid var(--apple-border);
         animation: slideDown 0.3s ease;
     }
 
@@ -289,7 +289,7 @@ else
 
     .sale-content h5 {
         margin: 15px 0 10px 0;
-        color: #495057;
+        color: var(--apple-text-primary);
         font-size: 16px;
     }
 
@@ -301,28 +301,28 @@ else
         .products-table table {
             width: 100%;
             border-collapse: collapse;
-            background: #f8f9fa;
-            border-radius: 5px;
+            background: var(--apple-bg-secondary);
+            border-radius: 10px;
         }
 
         .products-table thead {
-            background: #e9ecef;
+            background: var(--apple-bg-tertiary);
         }
 
         .products-table th {
             padding: 10px;
             text-align: left;
             font-weight: 600;
-            color: #495057;
+            color: var(--apple-text-primary);
             font-size: 13px;
-            border-bottom: 2px solid #dee2e6;
+            border-bottom: 2px solid var(--apple-border);
         }
 
         .products-table td {
             padding: 10px;
-            color: #212529;
+            color: var(--apple-text-primary);
             font-size: 14px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--apple-border);
         }
 
         .products-table tbody tr:last-child td {
@@ -331,70 +331,70 @@ else
 
     .status-badge {
         padding: 4px 8px;
-        border-radius: 4px;
+        border-radius: 8px;
         font-size: 12px;
         font-weight: 600;
     }
 
     .status-badge.status-ожидает {
-        background: #cfe2ff;
-        color: #084298;
+        background: rgba(10, 132, 255, 0.2);
+        color: var(--apple-blue);
     }
 
     .status-badge.status-отправлено {
-        background: #fff3cd;
-        color: #856404;
+        background: rgba(255, 159, 10, 0.2);
+        color: var(--apple-orange);
     }
 
     .status-badge.status-получено {
-        background: #d1e7dd;
-        color: #0f5132;
+        background: rgba(48, 209, 88, 0.2);
+        color: var(--apple-green);
     }
 
     .status-badge.status-возврат {
-        background: #f8d7da;
-        color: #842029;
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
     }
 
     .product-status-badge {
         display: inline-block;
         padding: 4px 10px;
-        border-radius: 4px;
+        border-radius: 8px;
         font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
     }
 
     .product-status-badge.status-ожидает {
-        background: #cfe2ff;
-        color: #084298;
+        background: rgba(10, 132, 255, 0.2);
+        color: var(--apple-blue);
     }
 
     .product-status-badge.status-отправлено {
-        background: #fff3cd;
-        color: #856404;
+        background: rgba(255, 159, 10, 0.2);
+        color: var(--apple-orange);
     }
 
     .product-status-badge.status-возврат {
-        background: #f8d7da;
-        color: #842029;
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
     }
 
     .product-status-badge.status-продано {
-        background: #d1e7dd;
-        color: #0f5132;
+        background: rgba(48, 209, 88, 0.2);
+        color: var(--apple-green);
     }
 
     .product-return-row {
-        background: #fff5f5 !important;
+        background: rgba(255, 69, 58, 0.1) !important;
     }
 
     .btn-mark-received-small {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
         border: none;
         padding: 6px 12px;
-        border-radius: 4px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 12px;
         font-weight: 600;
@@ -403,7 +403,7 @@ else
     }
 
         .btn-mark-received-small:hover {
-            background: #157347;
+            background: var(--apple-green);
             transform: scale(1.05);
         }
 
@@ -414,11 +414,11 @@ else
     }
 
     .btn-confirm {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
         border: none;
         padding: 12px 24px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -426,16 +426,16 @@ else
     }
 
         .btn-confirm:hover {
-            background: #157347;
+            background: var(--apple-green);
             transform: scale(1.02);
         }
 
     .btn-return {
-        background: #fd7e14;
+        background: var(--apple-orange);
         color: white;
         border: none;
         padding: 12px 24px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -443,16 +443,16 @@ else
     }
 
         .btn-return:hover {
-            background: #e36209;
+            background: var(--apple-orange);
             transform: scale(1.02);
         }
 
     .btn-ship {
-        background: #0d6efd;
+        background: var(--apple-blue);
         color: white;
         border: none;
         padding: 12px 24px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -460,7 +460,7 @@ else
     }
 
         .btn-ship:hover {
-            background: #0b5ed7;
+            background: var(--apple-blue);
             transform: scale(1.02);
         }
 
@@ -478,7 +478,7 @@ else
     }
 
     .modal-content {
-        background: white;
+        background: var(--apple-gradient-card);
         padding: 30px;
         border-radius: 8px;
         width: 90%;
@@ -494,51 +494,51 @@ else
 
         .modal-content h4 {
             margin: 0 0 20px 0;
-            color: #212529;
+            color: var(--apple-text-primary);
         }
 
         .modal-content h5 {
             margin: 20px 0 10px 0;
-            color: #495057;
+            color: var(--apple-text-primary);
             font-size: 16px;
         }
 
     .sale-summary {
-        background: #f8f9fa;
+        background: var(--apple-bg-secondary);
         padding: 15px;
-        border-radius: 5px;
+        border-radius: 10px;
         margin-bottom: 20px;
     }
 
         .sale-summary p {
             margin: 5px 0;
-            color: #495057;
+            color: var(--apple-text-primary);
         }
 
     .warning-text {
-        color: #856404;
-        background: #fff3cd;
+        color: var(--apple-orange);
+        background: rgba(255, 159, 10, 0.2);
         padding: 12px;
-        border-radius: 5px;
-        border: 1px solid #ffecb5;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 159, 10, 0.3);
         margin-bottom: 20px;
     }
 
     .return-products-list {
         max-height: 300px;
         overflow-y: auto;
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
         padding: 10px;
-        background: #f8f9fa;
+        background: var(--apple-bg-secondary);
     }
 
     .return-product-item {
         padding: 10px;
-        background: white;
-        border-radius: 5px;
+        background: var(--apple-gradient-card);
+        border-radius: 10px;
         margin-bottom: 8px;
-        border: 1px solid #dee2e6;
+        border: 1px solid var(--apple-border);
     }
 
     .checkbox-label {
@@ -562,12 +562,12 @@ else
     }
 
     .product-color {
-        color: #9933cc;
+        color: var(--apple-purple);
         font-weight: 500;
     }
 
     .product-price {
-        color: #198754;
+        color: var(--apple-green);
         font-weight: 600;
     }
 
@@ -580,37 +580,37 @@ else
     .btn-select-all, .btn-deselect-all {
         padding: 8px 16px;
         border: none;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 13px;
         font-weight: 600;
     }
 
     .btn-select-all {
-        background: #0d6efd;
+        background: var(--apple-blue);
         color: white;
     }
 
         .btn-select-all:hover {
-            background: #0b5ed7;
+            background: var(--apple-blue);
         }
 
     .btn-deselect-all {
-        background: #6c757d;
+        background: var(--apple-text-secondary);
         color: white;
     }
 
         .btn-deselect-all:hover {
-            background: #5a6268;
+            background: var(--apple-text-secondary);
         }
 
     .error-message {
-        background: #f8d7da;
-        color: #842029;
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
         padding: 12px;
-        border-radius: 5px;
+        border-radius: 10px;
         margin-bottom: 15px;
-        border: 1px solid #f5c2c7;
+        border: 1px solid rgba(255, 69, 58, 0.3);
         font-size: 14px;
         font-weight: 500;
     }
@@ -625,37 +625,37 @@ else
     .btn-cancel, .btn-save, .btn-return-confirm {
         padding: 10px 24px;
         border: none;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
     }
 
     .btn-cancel {
-        background: #6c757d;
+        background: var(--apple-text-secondary);
         color: white;
     }
 
         .btn-cancel:hover {
-            background: #5a6268;
+            background: var(--apple-text-secondary);
         }
 
     .btn-save {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
     }
 
         .btn-save:hover {
-            background: #157347;
+            background: var(--apple-green);
         }
 
     .btn-return-confirm {
-        background: #fd7e14;
+        background: var(--apple-orange);
         color: white;
     }
 
         .btn-return-confirm:hover {
-            background: #e36209;
+            background: var(--apple-orange);
         }
 
         .btn-return-confirm:disabled {

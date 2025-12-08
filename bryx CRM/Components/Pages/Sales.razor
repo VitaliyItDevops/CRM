@@ -1,4 +1,4 @@
-@page "/sales"
+﻿@page "/sales"
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using bryx_CRM.Data
@@ -264,31 +264,81 @@ else
                 @if (cartItems.Any())
                 {
                     <div class="cart-items">
-                        @foreach (var item in cartItems)
+                        @for (int i = 0; i < cartItems.Count; i++)
                         {
-                            <div class="cart-item">
-                                <div class="cart-item-info">
-                                    <strong>@item.ProductName</strong>
-                                    @if (!string.IsNullOrEmpty(item.Color))
-                                    {
-                                        <span class="cart-item-color">Цвет: @item.Color</span>
-                                    }
-                                    <span class="cart-item-category">@item.Category</span>
+                            var index = i;
+                            var item = cartItems[index];
+                            <div class="cart-item-wrapper">
+                                <div class="cart-item">
+                                    <div class="cart-item-info">
+                                        <strong>@item.ProductName</strong>
+                                        @if (!string.IsNullOrEmpty(item.Color))
+                                        {
+                                            <span class="cart-item-color">Цвет: @item.Color</span>
+                                        }
+                                        <span class="cart-item-category">@item.Category</span>
+                                        @if (!string.IsNullOrEmpty(item.Subcategory))
+                                        {
+                                            <span class="cart-item-subcategory">(@item.Subcategory)</span>
+                                        }
+                                    </div>
+                                    <div class="cart-item-price">
+                                        <label>Цена продажи:</label>
+                                        <input type="number" step="0.01" @bind="item.SalePrice" class="form-input-small" />
+                                        <span>₽</span>
+                                        <label style="margin-left: 15px;">Кол-во:</label>
+                                        <input type="number" min="1" @bind="item.Quantity" class="form-input-quantity" />
+                                    </div>
+                                    <button class="btn-remove-item" @onclick="@(() => RemoveItemFromCart(item))">
+                                        ✖
+                                    </button>
                                 </div>
-                                <div class="cart-item-price">
-                                    <label>Цена продажи:</label>
-                                    <input type="number" step="0.01" @bind="item.SalePrice" class="form-input-small" />
-                                    <span>₽</span>
-                                </div>
-                                <button class="btn-remove-item" @onclick="@(() => RemoveItemFromCart(item))">
-                                    ✖
-                                </button>
+
+                                @if (!item.IsAccessory)
+                                {
+                                    <button class="btn-accessories" @onclick="@(() => ToggleAccessories(index))">
+                                        @(expandedAccessoriesIndex == index ? "▼" : "▶") Доп. Аксс.
+                                    </button>
+                                }
+
+                                @if (!item.IsAccessory && expandedAccessoriesIndex == index)
+                                {
+                                    <div class="accessories-list">
+                                        @if (availableAccessories == null)
+                                        {
+                                            <p>Загрузка...</p>
+                                        }
+                                        else if (!availableAccessories.Any())
+                                        {
+                                            <p class="no-accessories">Нет доступных аксессуаров</p>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var accessory in availableAccessories)
+                                            {
+                                                <div class="accessory-item">
+                                                    <div class="accessory-info">
+                                                        <strong>@accessory.Name</strong>
+                                                        @if (!string.IsNullOrEmpty(accessory.Color))
+                                                        {
+                                                            <span class="accessory-color">@accessory.Color</span>
+                                                        }
+                                                        <span class="accessory-price">@((accessory.PlannedPrice ?? accessory.PurchasePrice).ToString("N0")) ₽</span>
+                                                    </div>
+                                                    <button class="btn-add-accessory" @onclick="@(() => AddAccessoryToCart(accessory))">
+                                                        + Добавить
+                                                    </button>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
                             </div>
                         }
                     </div>
 
                     <div class="cart-total">
-                        <strong>Итого:</strong> @cartItems.Sum(i => i.SalePrice).ToString("N0") ₽
+                        <strong>Итого:</strong> @cartItems.Sum(i => i.SalePrice * i.Quantity).ToString("N0") ₽
                     </div>
                 }
             </div>
@@ -312,11 +362,11 @@ else
     }
 
     .btn-add-sale {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--apple-gradient-blue);
         color: white;
         border: none;
         padding: 12px 24px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -324,16 +374,16 @@ else
     }
 
         .btn-add-sale:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            background: var(--apple-gradient-blue);
             transform: scale(1.02);
         }
 
     .filters-section {
-        background: #f8f9fa;
+        background: var(--apple-bg-secondary);
         padding: 20px;
         border-radius: 8px;
         margin-bottom: 20px;
-        border: 1px solid #dee2e6;
+        border: 1px solid var(--apple-border);
     }
 
     .filters-row {
@@ -356,16 +406,16 @@ else
             display: block;
             margin-bottom: 5px;
             font-weight: 600;
-            color: #495057;
+            color: var(--apple-text-primary);
             font-size: 13px;
         }
 
     .btn-reset-filters {
-        background: #6c757d;
+        background: var(--apple-text-secondary);
         color: white;
         border: none;
         padding: 10px 20px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -374,12 +424,12 @@ else
     }
 
         .btn-reset-filters:hover {
-            background: #5a6268;
+            background: var(--apple-text-secondary);
         }
 
     .no-sales {
         text-align: center;
-        color: #6c757d;
+        color: var(--apple-text-secondary);
         padding: 40px;
         font-style: italic;
     }
@@ -391,8 +441,8 @@ else
     }
 
     .sale-card {
-        background: white;
-        border: 1px solid #dee2e6;
+        background: var(--apple-gradient-card);
+        border: 1px solid var(--apple-border);
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -404,7 +454,7 @@ else
         }
 
         .sale-card.expanded {
-            border-color: #667eea;
+            border-color: var(--apple-blue);
         }
 
     .sale-header {
@@ -417,12 +467,12 @@ else
     }
 
         .sale-header:hover {
-            background: #f8f9fa;
+            background: var(--apple-bg-secondary);
         }
 
     .sale-info h4 {
         margin: 0 0 10px 0;
-        color: #212529;
+        color: var(--apple-text-primary);
         font-size: 18px;
     }
 
@@ -431,7 +481,7 @@ else
         gap: 20px;
         flex-wrap: wrap;
         font-size: 14px;
-        color: #6c757d;
+        color: var(--apple-text-secondary);
     }
 
         .sale-details span {
@@ -441,13 +491,13 @@ else
 
     .expand-icon {
         font-size: 20px;
-        color: #667eea;
+        color: var(--apple-blue);
         font-weight: bold;
     }
 
     .sale-content {
         padding: 0 20px 20px 20px;
-        border-top: 1px solid #dee2e6;
+        border-top: 1px solid var(--apple-border);
         animation: slideDown 0.3s ease;
     }
 
@@ -469,13 +519,13 @@ else
 
         .sale-additional-info p {
             margin: 5px 0;
-            color: #495057;
+            color: var(--apple-text-primary);
             font-size: 14px;
         }
 
     .sale-content h5 {
         margin: 15px 0 10px 0;
-        color: #495057;
+        color: var(--apple-text-primary);
         font-size: 16px;
     }
 
@@ -486,28 +536,28 @@ else
         .products-table table {
             width: 100%;
             border-collapse: collapse;
-            background: #f8f9fa;
-            border-radius: 5px;
+            background: var(--apple-bg-secondary);
+            border-radius: 10px;
         }
 
         .products-table thead {
-            background: #e9ecef;
+            background: var(--apple-bg-tertiary);
         }
 
         .products-table th {
             padding: 10px;
             text-align: left;
             font-weight: 600;
-            color: #495057;
+            color: var(--apple-text-primary);
             font-size: 13px;
-            border-bottom: 2px solid #dee2e6;
+            border-bottom: 2px solid var(--apple-border);
         }
 
         .products-table td {
             padding: 10px;
-            color: #212529;
+            color: var(--apple-text-primary);
             font-size: 14px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--apple-border);
         }
 
         .products-table tbody tr:last-child td {
@@ -516,73 +566,73 @@ else
 
     .status-badge {
         padding: 4px 8px;
-        border-radius: 4px;
+        border-radius: 8px;
         font-size: 12px;
         font-weight: 600;
     }
 
     .status-отправлено {
-        background: #fff3cd;
-        color: #856404;
+        background: rgba(255, 159, 10, 0.2);
+        color: var(--apple-orange);
     }
 
     .status-получено {
-        background: #d1e7dd;
-        color: #0f5132;
+        background: rgba(48, 209, 88, 0.2);
+        color: var(--apple-green);
         font-weight: 700;
     }
 
     .status-возврат {
-        background: #f8d7da;
-        color: #842029;
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
         font-weight: 700;
     }
 
     .status-частичный-возврат {
-        background: #fff3cd;
-        color: #664d03;
+        background: rgba(255, 159, 10, 0.2);
+        color: var(--apple-orange);
         font-weight: 700;
     }
 
     .product-status-badge {
         display: inline-block;
         padding: 4px 10px;
-        border-radius: 4px;
+        border-radius: 8px;
         font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
     }
 
     .product-status-badge.status-отправлено {
-        background: #fff3cd;
-        color: #856404;
+        background: rgba(255, 159, 10, 0.2);
+        color: var(--apple-orange);
     }
 
     .product-status-badge.status-получено {
-        background: #d1e7dd;
-        color: #0f5132;
+        background: rgba(48, 209, 88, 0.2);
+        color: var(--apple-green);
     }
 
     .product-status-badge.status-возврат {
-        background: #f8d7da;
-        color: #842029;
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
     }
 
     .product-status-badge.status-в-наличии {
-        background: #cfe2ff;
-        color: #084298;
+        background: rgba(10, 132, 255, 0.2);
+        color: var(--apple-blue);
     }
 
     .product-return {
-        background: #fff5f5 !important;
+        background: rgba(255, 69, 58, 0.1) !important;
     }
 
     .btn-mark-received {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
         border: none;
         padding: 6px 12px;
-        border-radius: 4px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 12px;
         font-weight: 600;
@@ -591,7 +641,7 @@ else
     }
 
         .btn-mark-received:hover {
-            background: #157347;
+            background: var(--apple-green);
             transform: scale(1.05);
         }
 
@@ -609,7 +659,7 @@ else
     }
 
     .modal-content {
-        background: white;
+        background: var(--apple-gradient-card);
         padding: 30px;
         border-radius: 8px;
         width: 90%;
@@ -625,19 +675,19 @@ else
 
         .modal-content h4 {
             margin: 0 0 20px 0;
-            color: #212529;
+            color: var(--apple-text-primary);
         }
 
     .form-section {
         margin-bottom: 30px;
         padding: 20px;
-        background: #f8f9fa;
+        background: var(--apple-bg-secondary);
         border-radius: 8px;
     }
 
         .form-section h5 {
             margin: 0 0 15px 0;
-            color: #495057;
+            color: var(--apple-text-primary);
             font-size: 16px;
         }
 
@@ -649,35 +699,35 @@ else
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #495057;
+            color: var(--apple-text-primary);
             font-size: 14px;
         }
 
     .required {
-        color: #dc3545;
+        color: var(--apple-red);
     }
 
     .form-input, .form-select, .form-textarea {
         width: 100%;
         padding: 10px 12px;
-        border: 1px solid #ced4da;
-        border-radius: 5px;
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
         font-size: 14px;
         box-sizing: border-box;
     }
 
         .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
-            border-color: #0d6efd;
+            border-color: var(--apple-blue);
             box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
     .item-selector {
-        background: white;
+        background: var(--apple-gradient-card);
         padding: 15px;
-        border-radius: 5px;
+        border-radius: 10px;
         margin-bottom: 15px;
-        border: 1px solid #dee2e6;
+        border: 1px solid var(--apple-border);
     }
 
     .item-selector-actions {
@@ -688,11 +738,11 @@ else
     }
 
     .btn-add-item {
-        background: #0d6efd;
+        background: var(--apple-blue);
         color: white;
         border: none;
         padding: 10px 20px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -700,34 +750,34 @@ else
     }
 
         .btn-add-item:hover {
-            background: #0b5ed7;
+            background: var(--apple-blue);
         }
 
     .btn-cancel-small, .btn-add-small {
         padding: 8px 16px;
         border: none;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 13px;
         font-weight: 600;
     }
 
     .btn-cancel-small {
-        background: #6c757d;
+        background: var(--apple-text-secondary);
         color: white;
     }
 
         .btn-cancel-small:hover {
-            background: #5a6268;
+            background: var(--apple-text-secondary);
         }
 
     .btn-add-small {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
     }
 
         .btn-add-small:hover {
-            background: #157347;
+            background: var(--apple-green);
         }
 
         .btn-add-small:disabled {
@@ -744,9 +794,9 @@ else
         align-items: center;
         gap: 15px;
         padding: 12px;
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
+        background: var(--apple-gradient-card);
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
         margin-bottom: 10px;
     }
 
@@ -758,18 +808,18 @@ else
     }
 
         .cart-item-info strong {
-            color: #212529;
+            color: var(--apple-text-primary);
         }
 
     .cart-item-color {
         font-size: 12px;
-        color: #9933cc;
+        color: var(--apple-purple);
         font-weight: 500;
     }
 
     .cart-item-category {
         font-size: 12px;
-        color: #6c757d;
+        color: var(--apple-text-secondary);
     }
 
     .cart-item-price {
@@ -780,56 +830,175 @@ else
 
         .cart-item-price label {
             font-size: 13px;
-            color: #495057;
+            color: var(--apple-text-primary);
             margin: 0;
         }
 
     .form-input-small {
         width: 120px;
         padding: 6px 10px;
-        border: 1px solid #ced4da;
-        border-radius: 5px;
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
         font-size: 14px;
     }
 
         .form-input-small:focus {
             outline: none;
-            border-color: #0d6efd;
+            border-color: var(--apple-blue);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+    .form-input-quantity {
+        width: 60px;
+        padding: 6px 10px;
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+        .form-input-quantity:focus {
+            outline: none;
+            border-color: var(--apple-blue);
             box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
     .btn-remove-item {
-        background: #dc3545;
+        background: var(--apple-red);
         color: white;
         border: none;
         padding: 6px 10px;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         transition: background 0.3s ease;
     }
 
         .btn-remove-item:hover {
-            background: #bb2d3b;
+            background: var(--apple-red);
+        }
+
+    .cart-item-wrapper {
+        margin-bottom: 10px;
+    }
+
+    .cart-item-subcategory {
+        font-size: 12px;
+        color: var(--apple-blue);
+        font-style: italic;
+    }
+
+    .btn-accessories {
+        margin-left: 12px;
+        margin-top: 5px;
+        background: var(--apple-text-secondary);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: background 0.3s ease;
+    }
+
+        .btn-accessories:hover {
+            background: var(--apple-text-secondary);
+        }
+
+    .accessories-list {
+        margin-left: 12px;
+        margin-top: 10px;
+        padding: 12px;
+        background: var(--apple-bg-secondary);
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
+    }
+
+        .accessories-list p {
+            margin: 0;
+            color: var(--apple-text-secondary);
+            font-size: 13px;
+        }
+
+    .no-accessories {
+        text-align: center;
+        padding: 10px;
+        color: var(--apple-text-secondary);
+    }
+
+    .accessory-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px;
+        background: var(--apple-gradient-card);
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        margin-bottom: 8px;
+    }
+
+        .accessory-item:last-child {
+            margin-bottom: 0;
+        }
+
+    .accessory-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+        .accessory-info strong {
+            color: var(--apple-text-primary);
+            font-size: 14px;
+        }
+
+    .accessory-color {
+        font-size: 12px;
+        color: var(--apple-purple);
+        font-weight: 500;
+    }
+
+    .accessory-price {
+        font-size: 13px;
+        color: var(--apple-green);
+        font-weight: 600;
+    }
+
+    .btn-add-accessory {
+        background: var(--apple-green);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: background 0.3s ease;
+        white-space: nowrap;
+    }
+
+        .btn-add-accessory:hover {
+            background: var(--apple-green);
         }
 
     .cart-total {
         text-align: right;
         padding: 15px;
-        background: white;
-        border-radius: 5px;
+        background: var(--apple-gradient-card);
+        border-radius: 10px;
         margin-top: 10px;
         font-size: 16px;
-        color: #212529;
+        color: var(--apple-text-primary);
     }
 
     .error-message {
-        background: #f8d7da;
-        color: #842029;
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
         padding: 12px;
-        border-radius: 5px;
+        border-radius: 10px;
         margin-bottom: 15px;
-        border: 1px solid #f5c2c7;
+        border: 1px solid rgba(255, 69, 58, 0.3);
         font-size: 14px;
         font-weight: 500;
     }
@@ -844,28 +1013,28 @@ else
     .btn-cancel, .btn-save {
         padding: 10px 24px;
         border: none;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
     }
 
     .btn-cancel {
-        background: #6c757d;
+        background: var(--apple-text-secondary);
         color: white;
     }
 
         .btn-cancel:hover {
-            background: #5a6268;
+            background: var(--apple-text-secondary);
         }
 
     .btn-save {
-        background: #198754;
+        background: var(--apple-green);
         color: white;
     }
 
         .btn-save:hover {
-            background: #157347;
+            background: var(--apple-green);
         }
 
         .btn-save:disabled {
@@ -878,7 +1047,7 @@ else
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         margin-top: 10px;
-        border-radius: 5px;
+        border-radius: 10px;
     }
 
         .products-table table {
@@ -895,13 +1064,13 @@ else
             }
 
             .products-table table th {
-                background: #f8f9fa;
+                background: var(--apple-bg-secondary);
                 font-weight: 600;
-                border-bottom: 2px solid #dee2e6;
+                border-bottom: 2px solid var(--apple-border);
             }
 
             .products-table table td {
-                border-bottom: 1px solid #dee2e6;
+                border-bottom: 1px solid var(--apple-border);
             }
 
     /* Мобильная адаптация */
@@ -1143,6 +1312,10 @@ else
     private List<CartItem> cartItems = new List<CartItem>();
     private bool showItemSelector = false;
 
+    // Дополнительные аксессуары
+    private int? expandedAccessoriesIndex = null;
+    private List<Product>? availableAccessories = null;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadSales();
@@ -1364,9 +1537,19 @@ else
 
         // Проверяем, не добавлен ли уже этот товар с таким цветом
         var colorToCheck = string.IsNullOrEmpty(selectedColor) ? null : selectedColor;
-        if (cartItems.Any(i => i.Category == selectedCategory && i.ProductName == selectedProductName && i.Color == colorToCheck))
+        var existingItem = cartItems.FirstOrDefault(i => i.Category == selectedCategory && i.ProductName == selectedProductName && i.Color == colorToCheck);
+
+        if (existingItem != null)
         {
-            saleError = "Этот товар уже добавлен в корзину!";
+            // Если товар уже в корзине, увеличиваем количество
+            existingItem.Quantity++;
+            showItemSelector = false;
+            selectedCategory = "";
+            selectedProductName = "";
+            selectedColor = "";
+            availableProductNames.Clear();
+            availableColors.Clear();
+            saleError = "";
             StateHasChanged();
             return;
         }
@@ -1396,6 +1579,7 @@ else
         var cartItem = new CartItem
         {
             Category = selectedCategory,
+            Subcategory = product.Subcategory,
             ProductName = selectedProductName,
             Color = string.IsNullOrEmpty(selectedColor) ? null : selectedColor,
             SalePrice = product.PlannedPrice ?? product.PurchasePrice
@@ -1416,6 +1600,83 @@ else
     private void RemoveItemFromCart(CartItem item)
     {
         cartItems.Remove(item);
+        StateHasChanged();
+    }
+
+    private async Task ToggleAccessories(int index)
+    {
+        if (expandedAccessoriesIndex == index)
+        {
+            // Скрываем аксессуары
+            expandedAccessoriesIndex = null;
+            availableAccessories = null;
+        }
+        else
+        {
+            // Показываем аксессуары
+            expandedAccessoriesIndex = index;
+            await LoadAccessories(index);
+        }
+        StateHasChanged();
+    }
+
+    private async Task LoadAccessories(int cartItemIndex)
+    {
+        if (cartItemIndex < 0 || cartItemIndex >= cartItems.Count)
+        {
+            availableAccessories = null;
+            return;
+        }
+
+        var cartItem = cartItems[cartItemIndex];
+
+        using var context = await DbContextFactory.CreateDbContextAsync();
+
+        // Загружаем товары, у которых подкатегория равна категории основного товара
+        // Например: товар в категории "Наушники" → показываем товары с подкатегорией "Наушники"
+        // Исключаем товары, которые уже в корзине
+        var cartProductNames = cartItems.Select(i => i.ProductName.ToLower()).ToList();
+
+        var allAccessories = await context.Products
+            .Where(p => p.Subcategory == cartItem.Category
+                && p.Status == "В наличии"
+                && !cartProductNames.Contains(p.Name.ToLower()))
+            .OrderBy(p => p.Name)
+            .ToListAsync();
+
+        // Группируем по Name и Color, берем первый товар из каждой группы
+        availableAccessories = allAccessories
+            .GroupBy(p => new { Name = p.Name.ToLower(), Color = (p.Color ?? "").ToLower() })
+            .Select(g => g.First())
+            .ToList();
+    }
+
+    private async Task AddAccessoryToCart(Product accessory)
+    {
+        // Проверяем, не добавлен ли уже этот товар
+        if (cartItems.Any(i => i.ProductName.ToLower() == accessory.Name.ToLower() && i.Color == accessory.Color))
+        {
+            return;
+        }
+
+        var cartItem = new CartItem
+        {
+            Category = accessory.Category,
+            Subcategory = accessory.Subcategory,
+            ProductName = accessory.Name,
+            Color = accessory.Color,
+            SalePrice = accessory.PlannedPrice ?? accessory.PurchasePrice,
+            IsAccessory = true  // Помечаем как аксессуар
+        };
+
+        cartItems.Add(cartItem);
+
+        // Перезагружаем аксессуары чтобы обновить список
+        if (expandedAccessoriesIndex.HasValue)
+        {
+            await LoadAccessories(expandedAccessoriesIndex.Value);
+        }
+
         StateHasChanged();
     }
 
@@ -1457,7 +1718,7 @@ else
                 TTN = string.IsNullOrWhiteSpace(ttn) ? null : ttn.Trim(),
                 SoldThrough = string.IsNullOrWhiteSpace(soldThrough) ? null : soldThrough.Trim(),
                 AdditionalService = string.IsNullOrWhiteSpace(additionalService) ? null : additionalService.Trim(),
-                TotalAmount = cartItems.Sum(i => i.SalePrice),
+                TotalAmount = cartItems.Sum(i => i.SalePrice * i.Quantity),
                 // Status будет установлен из значения по умолчанию модели = "Ожидает"
                 CreatedAt = DateTime.UtcNow
             };
@@ -1465,7 +1726,7 @@ else
             context.Sales.Add(sale);
             await context.SaveChangesAsync(); // Сохраняем продажу чтобы получить Id
 
-            // Для каждого товара в корзине находим последнюю доступную позицию и привязываем к продаже
+            // Для каждого товара в корзине находим нужное количество доступных позиций и привязываем к продаже
             foreach (var cartItem in cartItems)
             {
                 var query = context.Products
@@ -1479,31 +1740,36 @@ else
                     query = query.Where(p => p.Color == cartItem.Color);
                 }
 
-                var product = await query
+                // Берем нужное количество товаров
+                var products = await query
                     .OrderByDescending(p => p.Id)
-                    .FirstOrDefaultAsync();
+                    .Take(cartItem.Quantity)
+                    .ToListAsync();
 
-                if (product == null)
+                if (products.Count < cartItem.Quantity)
                 {
-                    // Откатываем транзакцию если товар больше не доступен
+                    // Откатываем транзакцию если недостаточно товаров в наличии
                     var productDesc = string.IsNullOrEmpty(cartItem.Color)
                         ? $"'{cartItem.ProductName}'"
                         : $"'{cartItem.ProductName}' ({cartItem.Color})";
-                    saleError = $"Товар {productDesc} больше не доступен в наличии!";
+                    saleError = $"Недостаточно товара {productDesc} в наличии! Требуется: {cartItem.Quantity}, доступно: {products.Count}";
                     context.Sales.Remove(sale);
                     await context.SaveChangesAsync();
                     StateHasChanged();
                     return;
                 }
 
-                // Обновляем данные товара
-                product.Status = "Ожидает";
-                product.Buyer = buyer.Trim();
-                product.SalePrice = cartItem.SalePrice;
-                product.SaleDate = saleDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-                product.SaleId = sale.Id;
-                product.OriginalSaleId = sale.Id; // Сохраняем для истории
-                product.UpdatedAt = DateTime.UtcNow;
+                // Обновляем данные каждого товара
+                foreach (var product in products)
+                {
+                    product.Status = "Ожидает";
+                    product.Buyer = buyer.Trim();
+                    product.SalePrice = cartItem.SalePrice;
+                    product.SaleDate = saleDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+                    product.SaleId = sale.Id;
+                    product.OriginalSaleId = sale.Id; // Сохраняем для истории
+                    product.UpdatedAt = DateTime.UtcNow;
+                }
             }
 
             await context.SaveChangesAsync();
@@ -1553,8 +1819,11 @@ else
     private class CartItem
     {
         public string Category { get; set; } = "";
+        public string? Subcategory { get; set; }
         public string ProductName { get; set; } = "";
         public string? Color { get; set; }
         public decimal SalePrice { get; set; }
+        public int Quantity { get; set; } = 1;
+        public bool IsAccessory { get; set; } = false;
     }
 }

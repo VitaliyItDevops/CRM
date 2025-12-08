@@ -13,6 +13,7 @@ namespace bryx_CRM.Data
 
         public DbSet<Product> Products { get; set; }
         public DbSet<Category> Categories { get; set; }
+        public DbSet<Subcategory> Subcategories { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<Sale> Sales { get; set; }
         public DbSet<Purchase> Purchases { get; set; }
@@ -42,6 +43,15 @@ namespace bryx_CRM.Data
                 entity.ToTable("Categories");
 
                 entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            // Настройки для таблицы Subcategories
+            modelBuilder.Entity<Subcategory>(entity =>
+            {
+                entity.ToTable("Subcategories");
+
+                entity.HasIndex(e => new { e.CategoryName, e.Name }).IsUnique();
+                entity.HasIndex(e => e.CategoryName);
             });
 
             // Настройки для таблицы Suppliers
@@ -123,6 +133,58 @@ namespace bryx_CRM.Data
                     Id = 5,
                     Name = "Вебкамеры",
                     Description = "Веб-камеры для видеозвонков и стриминга",
+                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                }
+            );
+
+            // Добавляем тестовые подкатегории
+            modelBuilder.Entity<Subcategory>().HasData(
+                new Subcategory
+                {
+                    Id = 1,
+                    CategoryName = "Наушники",
+                    Name = "Беспроводные",
+                    Description = "Bluetooth наушники",
+                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new Subcategory
+                {
+                    Id = 2,
+                    CategoryName = "Наушники",
+                    Name = "Проводные",
+                    Description = "Наушники с кабелем",
+                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new Subcategory
+                {
+                    Id = 3,
+                    CategoryName = "Клавиатуры",
+                    Name = "Механические",
+                    Description = "Клавиатуры с механическими переключателями",
+                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new Subcategory
+                {
+                    Id = 4,
+                    CategoryName = "Клавиатуры",
+                    Name = "Мембранные",
+                    Description = "Клавиатуры с мембранными переключателями",
+                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new Subcategory
+                {
+                    Id = 5,
+                    CategoryName = "Мышки",
+                    Name = "Игровые",
+                    Description = "Мышки для геймеров",
+                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new Subcategory
+                {
+                    Id = 6,
+                    CategoryName = "Мышки",
+                    Name = "Офисные",
+                    Description = "Мышки для работы",
                     CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 }
             );
