@@ -17,6 +17,56 @@
     </button>
 </div>
 
+<div class="filters-section">
+    <div class="filters-row">
+        <div class="filter-group">
+            <label>Покупатель:</label>
+            <input type="text" @bind="filterBuyer" @bind:after="LoadSales" placeholder="Поиск по имени" class="form-input" />
+        </div>
+
+        <div class="filter-group">
+            <label>ТТН:</label>
+            <input type="text" @bind="filterTTN" @bind:after="LoadSales" placeholder="Поиск по ТТН" class="form-input" />
+        </div>
+
+        <div class="filter-group">
+            <label>Дата от:</label>
+            <input type="date" @bind="filterDateFrom" @bind:after="LoadSales" class="form-input" />
+        </div>
+
+        <div class="filter-group">
+            <label>Дата до:</label>
+            <input type="date" @bind="filterDateTo" @bind:after="LoadSales" class="form-input" />
+        </div>
+    </div>
+
+    <div class="filters-row">
+        <div class="filter-group">
+            <label>Цена от:</label>
+            <input type="number" @bind="filterPriceMin" @bind:after="LoadSales" placeholder="Мин." class="form-input" step="100" />
+        </div>
+
+        <div class="filter-group">
+            <label>Цена до:</label>
+            <input type="number" @bind="filterPriceMax" @bind:after="LoadSales" placeholder="Макс." class="form-input" step="100" />
+        </div>
+
+        <div class="filter-group">
+            <label>Сортировка:</label>
+            <select @bind="sortBy" @bind:after="LoadSales" class="form-select">
+                <option value="date_desc">По дате (новые)</option>
+                <option value="date_asc">По дате (старые)</option>
+                <option value="price_desc">По цене (дорогие)</option>
+                <option value="price_asc">По цене (дешевые)</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <button class="btn-reset-filters" @onclick="ResetFilters">Сбросить фильтры</button>
+        </div>
+    </div>
+</div>
+
 @if (sales == null)
 {
     <p>Загрузка...</p>
@@ -79,17 +129,32 @@ else
                                         <th>Категория</th>
                                         <th>Поставщик</th>
                                         <th>Цена продажи</th>
+                                        <th>Статус</th>
+                                        <th>Действия</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var product in sale.Products)
                                     {
-                                        <tr>
+                                        <tr class="@(product.Status == "Возврат" ? "product-return" : "")">
                                             <td>@product.Name</td>
                                             <td>@(product.Color ?? "-")</td>
                                             <td>@product.Category</td>
                                             <td>@product.Supplier</td>
                                             <td>@product.SalePrice.ToString("N0") ₽</td>
+                                            <td>
+                                                <span class="product-status-badge status-@product.Status.ToLower().Replace(" ", "-")">
+                                                    @product.Status
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if (product.Status == "Возврат")
+                                                {
+                                                    <button class="btn-mark-received" @onclick="@(() => MarkReturnAsReceived(product))" @onclick:stopPropagation="true">
+                                                        ✓ Получено
+                                                    </button>
+                                                }
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -263,6 +328,55 @@ else
             transform: scale(1.02);
         }
 
+    .filters-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #dee2e6;
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+        .filters-row:last-child {
+            margin-bottom: 0;
+        }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 13px;
+        }
+
+    .btn-reset-filters {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        margin-top: 22px;
+    }
+
+        .btn-reset-filters:hover {
+            background: #5a6268;
+        }
+
     .no-sales {
         text-align: center;
         color: #6c757d;
@@ -429,6 +543,57 @@ else
         color: #664d03;
         font-weight: 700;
     }
+
+    .product-status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .product-status-badge.status-отправлено {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .product-status-badge.status-получено {
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+
+    .product-status-badge.status-возврат {
+        background: #f8d7da;
+        color: #842029;
+    }
+
+    .product-status-badge.status-в-наличии {
+        background: #cfe2ff;
+        color: #084298;
+    }
+
+    .product-return {
+        background: #fff5f5 !important;
+    }
+
+    .btn-mark-received {
+        background: #198754;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+        .btn-mark-received:hover {
+            background: #157347;
+            transform: scale(1.05);
+        }
 
     .modal-overlay {
         position: fixed;
@@ -948,6 +1113,15 @@ else
     private List<Sale>? sales = null;
     private int? expandedSaleId = null;
 
+    // Фильтры и сортировка
+    private string filterBuyer = "";
+    private string filterTTN = "";
+    private DateOnly? filterDateFrom = null;
+    private DateOnly? filterDateTo = null;
+    private decimal? filterPriceMin = null;
+    private decimal? filterPriceMax = null;
+    private string sortBy = "date_desc"; // date_desc, date_asc, price_desc, price_asc
+
     // Модальное окно добавления продажи
     private bool showAddSaleModal = false;
     private string buyer = "";
@@ -978,10 +1152,78 @@ else
     private async Task LoadSales()
     {
         using var context = await DbContextFactory.CreateDbContextAsync();
-        sales = await context.Sales
-            .Include(s => s.Products)
-            .OrderByDescending(s => s.SaleDate)
+
+        // Загружаем все продажи
+        var query = context.Sales.AsQueryable();
+
+        // Применяем фильтры
+        if (!string.IsNullOrWhiteSpace(filterBuyer))
+        {
+            query = query.Where(s => s.Buyer.Contains(filterBuyer));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filterTTN))
+        {
+            query = query.Where(s => s.TTN != null && s.TTN.Contains(filterTTN));
+        }
+
+        if (filterDateFrom.HasValue)
+        {
+            var dateFrom = filterDateFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            query = query.Where(s => s.SaleDate >= dateFrom);
+        }
+
+        if (filterDateTo.HasValue)
+        {
+            var dateTo = filterDateTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+            query = query.Where(s => s.SaleDate <= dateTo);
+        }
+
+        if (filterPriceMin.HasValue)
+        {
+            query = query.Where(s => s.TotalAmount >= filterPriceMin.Value);
+        }
+
+        if (filterPriceMax.HasValue)
+        {
+            query = query.Where(s => s.TotalAmount <= filterPriceMax.Value);
+        }
+
+        // Применяем сортировку
+        query = sortBy switch
+        {
+            "date_asc" => query.OrderBy(s => s.SaleDate),
+            "price_desc" => query.OrderByDescending(s => s.TotalAmount),
+            "price_asc" => query.OrderBy(s => s.TotalAmount),
+            _ => query.OrderByDescending(s => s.SaleDate) // date_desc по умолчанию
+        };
+
+        sales = await query.ToListAsync();
+
+        // Загружаем товары для каждой продажи отдельным запросом
+        // Используем OriginalSaleId для отображения истории (даже после возврата)
+        var saleIds = sales.Select(s => s.Id).ToList();
+        var products = await context.Products
+            .Where(p => p.OriginalSaleId != null && saleIds.Contains(p.OriginalSaleId.Value))
             .ToListAsync();
+
+        // Связываем товары с продажами вручную
+        foreach (var sale in sales)
+        {
+            sale.Products = products.Where(p => p.OriginalSaleId == sale.Id).ToList();
+        }
+    }
+
+    private async Task ResetFilters()
+    {
+        filterBuyer = "";
+        filterTTN = "";
+        filterDateFrom = null;
+        filterDateTo = null;
+        filterPriceMin = null;
+        filterPriceMax = null;
+        sortBy = "date_desc";
+        await LoadSales();
     }
 
     private string GetStatusText(string status)
@@ -1216,7 +1458,7 @@ else
                 SoldThrough = string.IsNullOrWhiteSpace(soldThrough) ? null : soldThrough.Trim(),
                 AdditionalService = string.IsNullOrWhiteSpace(additionalService) ? null : additionalService.Trim(),
                 TotalAmount = cartItems.Sum(i => i.SalePrice),
-                Status = "Отправлено",
+                // Status будет установлен из значения по умолчанию модели = "Ожидает"
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -1255,11 +1497,12 @@ else
                 }
 
                 // Обновляем данные товара
-                product.Status = "Отправлено";
+                product.Status = "Ожидает";
                 product.Buyer = buyer.Trim();
                 product.SalePrice = cartItem.SalePrice;
                 product.SaleDate = saleDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
                 product.SaleId = sale.Id;
+                product.OriginalSaleId = sale.Id; // Сохраняем для истории
                 product.UpdatedAt = DateTime.UtcNow;
             }
 
@@ -1274,6 +1517,36 @@ else
         {
             saleError = $"Ошибка при оформлении продажи: {ex.Message}";
             StateHasChanged();
+        }
+    }
+
+    private async Task MarkReturnAsReceived(Product product)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var productToUpdate = await context.Products.FindAsync(product.Id);
+            if (productToUpdate == null)
+            {
+                return;
+            }
+
+            // Меняем статус на "В наличии" - товар вернулся на склад
+            productToUpdate.Status = "В наличии";
+            productToUpdate.UpdatedAt = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+
+            // Обновляем список продаж
+            await LoadSales();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // В случае ошибки можно добавить логирование
+            Console.WriteLine($"Ошибка при обновлении статуса: {ex.Message}");
         }
     }
 

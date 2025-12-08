@@ -15,6 +15,7 @@ namespace bryx_CRM.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<Sale> Sales { get; set; }
+        public DbSet<Purchase> Purchases { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -63,6 +64,27 @@ namespace bryx_CRM.Data
                 entity.HasMany(s => s.Products)
                     .WithOne(p => p.Sale)
                     .HasForeignKey(p => p.SaleId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // Настройки для таблицы Purchases
+            modelBuilder.Entity<Purchase>(entity =>
+            {
+                entity.ToTable("Purchases");
+
+                entity.Property(e => e.TotalPriceUSD)
+                    .HasPrecision(18, 2);
+
+                entity.Property(e => e.ExchangeRate)
+                    .HasPrecision(18, 4);
+
+                entity.Property(e => e.TotalPriceUAH)
+                    .HasPrecision(18, 2);
+
+                // Настройка связи один-ко-многим (одна покупка - много товаров)
+                entity.HasMany(p => p.Products)
+                    .WithOne(p => p.Purchase)
+                    .HasForeignKey(p => p.PurchaseId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
 

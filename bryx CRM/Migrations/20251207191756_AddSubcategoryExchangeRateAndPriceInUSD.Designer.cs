@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using bryx_CRM.Data;
@@ -11,9 +12,11 @@ using bryx_CRM.Data;
 namespace bryx_CRM.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251207191756_AddSubcategoryExchangeRateAndPriceInUSD")]
+    partial class AddSubcategoryExchangeRateAndPriceInUSD
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -348,17 +351,11 @@ namespace bryx_CRM.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int?>("OriginalSaleId")
-                        .HasColumnType("integer");
-
                     b.Property<decimal?>("PlannedPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("PriceInUSD")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("PurchaseId")
-                        .HasColumnType("integer");
 
                     b.Property<decimal>("PurchasePrice")
                         .HasPrecision(18, 2)
@@ -411,8 +408,6 @@ namespace bryx_CRM.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Category");
-
-                    b.HasIndex("PurchaseId");
 
                     b.HasIndex("SaleId");
 
@@ -486,71 +481,6 @@ namespace bryx_CRM.Migrations
                             Status = "Продано",
                             Supplier = "ООО Техносервис"
                         });
-                });
-
-            modelBuilder.Entity("bryx_CRM.Data.Models.Purchase", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Comment")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("ExchangeRate")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<DateTime>("PurchaseDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Subcategory")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Supplier")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<decimal>("TotalPriceUAH")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("TotalPriceUSD")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Purchases", (string)null);
                 });
 
             modelBuilder.Entity("bryx_CRM.Data.Models.Sale", b =>
@@ -702,24 +632,12 @@ namespace bryx_CRM.Migrations
 
             modelBuilder.Entity("bryx_CRM.Data.Models.Product", b =>
                 {
-                    b.HasOne("bryx_CRM.Data.Models.Purchase", "Purchase")
-                        .WithMany("Products")
-                        .HasForeignKey("PurchaseId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("bryx_CRM.Data.Models.Sale", "Sale")
                         .WithMany("Products")
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Purchase");
-
                     b.Navigation("Sale");
-                });
-
-            modelBuilder.Entity("bryx_CRM.Data.Models.Purchase", b =>
-                {
-                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("bryx_CRM.Data.Models.Sale", b =>

@@ -3,33 +3,42 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace bryx_CRM.Data.Models
 {
-    public class Sale
+    public class Purchase
     {
         [Key]
         public int Id { get; set; }
 
         [Required]
-        [MaxLength(200)]
-        public string Buyer { get; set; } = string.Empty;
+        public DateTime PurchaseDate { get; set; }
 
         [Required]
-        public DateTime SaleDate { get; set; }
+        [MaxLength(100)]
+        public string Category { get; set; } = string.Empty;
 
         [MaxLength(100)]
-        public string? TTN { get; set; }
+        public string? Subcategory { get; set; }
 
+        [Required]
         [MaxLength(200)]
-        public string? SoldThrough { get; set; }
-
-        [MaxLength(300)]
-        public string? AdditionalService { get; set; }
+        public string Supplier { get; set; } = string.Empty;
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal TotalAmount { get; set; }
+        public decimal TotalPriceUSD { get; set; }
+
+        [Column(TypeName = "decimal(18,4)")]
+        public decimal ExchangeRate { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TotalPriceUAH { get; set; }
+
+        public int Quantity { get; set; }
 
         [Required]
         [MaxLength(50)]
-        public string Status { get; set; } = "Ожидает";
+        public string Status { get; set; } = "Ожидается";
+
+        [MaxLength(500)]
+        public string? Comment { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

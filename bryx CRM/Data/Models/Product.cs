@@ -12,6 +12,9 @@ namespace bryx_CRM.Data.Models
         [MaxLength(100)]
         public string Category { get; set; } = string.Empty;
 
+        [MaxLength(100)]
+        public string? Subcategory { get; set; }
+
         [Required]
         [MaxLength(200)]
         public string Name { get; set; } = string.Empty;
@@ -24,6 +27,12 @@ namespace bryx_CRM.Data.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal? PlannedPrice { get; set; }
+
+        [Column(TypeName = "decimal(18,4)")]
+        public decimal? ExchangeRate { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? PriceInUSD { get; set; }
 
         [Required]
         [MaxLength(50)]
@@ -70,8 +79,15 @@ namespace bryx_CRM.Data.Models
         [Timestamp]
         public byte[]? RowVersion { get; set; }
 
+        // Связь с покупкой
+        public int? PurchaseId { get; set; }
+        public Purchase? Purchase { get; set; }
+
         // Связь с продажей
         public int? SaleId { get; set; }
         public Sale? Sale { get; set; }
+
+        // Оригинальная продажа (для истории, никогда не обнуляется)
+        public int? OriginalSaleId { get; set; }
     }
 }

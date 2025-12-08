@@ -190,7 +190,9 @@ else
                                 <th>⭐</th>
                                 <th>Название</th>
                                 <th>Цвет</th>
-                                <th>Закупка</th>
+                                <th>Цена $</th>
+                                <th>Курс $</th>
+                                <th>Цена UAH</th>
                                 <th>Дата закупки</th>
                                 <th>Дата поступления</th>
                                 <th>Продажа</th>
@@ -213,7 +215,9 @@ else
                                     </td>
                                     <td class="product-name">@product.Name</td>
                                     <td class="product-color">@(product.Color ?? "-")</td>
-                                    <td class="price">@product.PurchasePrice.ToString("N0") ₽</td>
+                                    <td class="price">@(product.PriceInUSD?.ToString("N2") ?? "-") $</td>
+                                    <td class="price">@(product.ExchangeRate?.ToString("N2") ?? "-")</td>
+                                    <td class="price">@(product.PriceInUSD.HasValue && product.ExchangeRate.HasValue ? (product.PriceInUSD.Value * product.ExchangeRate.Value).ToString("N2") : "-") ₴</td>
                                     <td class="date-cell">@product.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</td>
                                     <td class="date-cell">@(product.ArrivalDate?.ToString("dd.MM.yyyy") ?? "-")</td>
                                     <td class="price">@product.SalePrice.ToString("N0") ₽</td>
