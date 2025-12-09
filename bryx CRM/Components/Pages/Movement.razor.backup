@@ -1,4 +1,4 @@
-﻿@page "/movement"
+@page "/movement"
 @rendermode InteractiveServer
 @using bryx_CRM.Data
 @using bryx_CRM.Data.Models
@@ -60,7 +60,6 @@ else
                                         <th>Категория</th>
                                         <th>Поставщик</th>
                                         <th>Цена продажи</th>
-                                        <th>Услуга</th>
                                         <th>Статус</th>
                                         <th>Действия</th>
                                     </tr>
@@ -74,19 +73,6 @@ else
                                             <td>@product.Category</td>
                                             <td>@product.Supplier</td>
                                             <td>@product.SalePrice.ToString("N0") ₽</td>
-                                            <td>
-                                                @if (product.Service != null)
-                                                {
-                                                    <div style="font-size: 0.9rem;">
-                                                        <strong>@product.Service.Name</strong><br/>
-                                                        <span style="color: var(--apple-text-secondary);">@product.Service.Price.ToString("N0") ₽</span>
-                                                    </div>
-                                                }
-                                                else
-                                                {
-                                                    <span style="color: var(--apple-text-tertiary);">-</span>
-                                                }
-                                            </td>
                                             <td>
                                                 <span class="product-status-badge @GetProductStatusClass(product.Status)">
                                                     @product.Status
@@ -222,7 +208,7 @@ else
 <style>
     .no-sales {
         text-align: center;
-        color: var(--apple-text-secondary);
+        color: #6c757d;
         padding: 40px;
         font-style: italic;
     }
@@ -234,8 +220,8 @@ else
     }
 
     .sale-card {
-        background: var(--apple-gradient-card);
-        border: 1px solid var(--apple-border);
+        background: white;
+        border: 1px solid #dee2e6;
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -247,7 +233,7 @@ else
         }
 
         .sale-card.expanded {
-            border-color: var(--apple-blue);
+            border-color: #667eea;
         }
 
     .sale-header {
@@ -260,12 +246,12 @@ else
     }
 
         .sale-header:hover {
-            background: var(--apple-bg-secondary);
+            background: #f8f9fa;
         }
 
     .sale-info h4 {
         margin: 0 0 10px 0;
-        color: var(--apple-text-primary);
+        color: #212529;
         font-size: 18px;
     }
 
@@ -274,18 +260,18 @@ else
         gap: 20px;
         flex-wrap: wrap;
         font-size: 14px;
-        color: var(--apple-text-secondary);
+        color: #6c757d;
     }
 
     .expand-icon {
         font-size: 20px;
-        color: var(--apple-blue);
+        color: #667eea;
         font-weight: bold;
     }
 
     .sale-content {
         padding: 0 20px 20px 20px;
-        border-top: 1px solid var(--apple-border);
+        border-top: 1px solid #dee2e6;
         animation: slideDown 0.3s ease;
     }
 
@@ -303,7 +289,7 @@ else
 
     .sale-content h5 {
         margin: 15px 0 10px 0;
-        color: var(--apple-text-primary);
+        color: #495057;
         font-size: 16px;
     }
 
@@ -315,28 +301,28 @@ else
         .products-table table {
             width: 100%;
             border-collapse: collapse;
-            background: var(--apple-bg-secondary);
-            border-radius: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
         }
 
         .products-table thead {
-            background: var(--apple-bg-tertiary);
+            background: #e9ecef;
         }
 
         .products-table th {
             padding: 10px;
             text-align: left;
             font-weight: 600;
-            color: var(--apple-text-primary);
+            color: #495057;
             font-size: 13px;
-            border-bottom: 2px solid var(--apple-border);
+            border-bottom: 2px solid #dee2e6;
         }
 
         .products-table td {
             padding: 10px;
-            color: var(--apple-text-primary);
+            color: #212529;
             font-size: 14px;
-            border-bottom: 1px solid var(--apple-border);
+            border-bottom: 1px solid #dee2e6;
         }
 
         .products-table tbody tr:last-child td {
@@ -345,70 +331,70 @@ else
 
     .status-badge {
         padding: 4px 8px;
-        border-radius: 8px;
+        border-radius: 4px;
         font-size: 12px;
         font-weight: 600;
     }
 
     .status-badge.status-ожидает {
-        background: rgba(10, 132, 255, 0.2);
-        color: var(--apple-blue);
+        background: #cfe2ff;
+        color: #084298;
     }
 
     .status-badge.status-отправлено {
-        background: rgba(255, 159, 10, 0.2);
-        color: var(--apple-orange);
+        background: #fff3cd;
+        color: #856404;
     }
 
     .status-badge.status-получено {
-        background: rgba(48, 209, 88, 0.2);
-        color: var(--apple-green);
+        background: #d1e7dd;
+        color: #0f5132;
     }
 
     .status-badge.status-возврат {
-        background: rgba(255, 69, 58, 0.15);
-        color: var(--apple-red);
+        background: #f8d7da;
+        color: #842029;
     }
 
     .product-status-badge {
         display: inline-block;
         padding: 4px 10px;
-        border-radius: 8px;
+        border-radius: 4px;
         font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
     }
 
     .product-status-badge.status-ожидает {
-        background: rgba(10, 132, 255, 0.2);
-        color: var(--apple-blue);
+        background: #cfe2ff;
+        color: #084298;
     }
 
     .product-status-badge.status-отправлено {
-        background: rgba(255, 159, 10, 0.2);
-        color: var(--apple-orange);
+        background: #fff3cd;
+        color: #856404;
     }
 
     .product-status-badge.status-возврат {
-        background: rgba(255, 69, 58, 0.15);
-        color: var(--apple-red);
+        background: #f8d7da;
+        color: #842029;
     }
 
     .product-status-badge.status-продано {
-        background: rgba(48, 209, 88, 0.2);
-        color: var(--apple-green);
+        background: #d1e7dd;
+        color: #0f5132;
     }
 
     .product-return-row {
-        background: rgba(255, 69, 58, 0.1) !important;
+        background: #fff5f5 !important;
     }
 
     .btn-mark-received-small {
-        background: var(--apple-green);
+        background: #198754;
         color: white;
         border: none;
         padding: 6px 12px;
-        border-radius: 8px;
+        border-radius: 4px;
         cursor: pointer;
         font-size: 12px;
         font-weight: 600;
@@ -417,7 +403,7 @@ else
     }
 
         .btn-mark-received-small:hover {
-            background: var(--apple-green);
+            background: #157347;
             transform: scale(1.05);
         }
 
@@ -428,11 +414,11 @@ else
     }
 
     .btn-confirm {
-        background: var(--apple-green);
+        background: #198754;
         color: white;
         border: none;
         padding: 12px 24px;
-        border-radius: 10px;
+        border-radius: 5px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -440,16 +426,16 @@ else
     }
 
         .btn-confirm:hover {
-            background: var(--apple-green);
+            background: #157347;
             transform: scale(1.02);
         }
 
     .btn-return {
-        background: var(--apple-orange);
+        background: #fd7e14;
         color: white;
         border: none;
         padding: 12px 24px;
-        border-radius: 10px;
+        border-radius: 5px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -457,16 +443,16 @@ else
     }
 
         .btn-return:hover {
-            background: var(--apple-orange);
+            background: #e36209;
             transform: scale(1.02);
         }
 
     .btn-ship {
-        background: var(--apple-blue);
+        background: #0d6efd;
         color: white;
         border: none;
         padding: 12px 24px;
-        border-radius: 10px;
+        border-radius: 5px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
@@ -474,7 +460,7 @@ else
     }
 
         .btn-ship:hover {
-            background: var(--apple-blue);
+            background: #0b5ed7;
             transform: scale(1.02);
         }
 
@@ -492,7 +478,7 @@ else
     }
 
     .modal-content {
-        background: var(--apple-gradient-card);
+        background: white;
         padding: 30px;
         border-radius: 8px;
         width: 90%;
@@ -508,51 +494,51 @@ else
 
         .modal-content h4 {
             margin: 0 0 20px 0;
-            color: var(--apple-text-primary);
+            color: #212529;
         }
 
         .modal-content h5 {
             margin: 20px 0 10px 0;
-            color: var(--apple-text-primary);
+            color: #495057;
             font-size: 16px;
         }
 
     .sale-summary {
-        background: var(--apple-bg-secondary);
+        background: #f8f9fa;
         padding: 15px;
-        border-radius: 10px;
+        border-radius: 5px;
         margin-bottom: 20px;
     }
 
         .sale-summary p {
             margin: 5px 0;
-            color: var(--apple-text-primary);
+            color: #495057;
         }
 
     .warning-text {
-        color: var(--apple-orange);
-        background: rgba(255, 159, 10, 0.2);
+        color: #856404;
+        background: #fff3cd;
         padding: 12px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 159, 10, 0.3);
+        border-radius: 5px;
+        border: 1px solid #ffecb5;
         margin-bottom: 20px;
     }
 
     .return-products-list {
         max-height: 300px;
         overflow-y: auto;
-        border: 1px solid var(--apple-border);
-        border-radius: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
         padding: 10px;
-        background: var(--apple-bg-secondary);
+        background: #f8f9fa;
     }
 
     .return-product-item {
         padding: 10px;
-        background: var(--apple-gradient-card);
-        border-radius: 10px;
+        background: white;
+        border-radius: 5px;
         margin-bottom: 8px;
-        border: 1px solid var(--apple-border);
+        border: 1px solid #dee2e6;
     }
 
     .checkbox-label {
@@ -576,12 +562,12 @@ else
     }
 
     .product-color {
-        color: var(--apple-purple);
+        color: #9933cc;
         font-weight: 500;
     }
 
     .product-price {
-        color: var(--apple-green);
+        color: #198754;
         font-weight: 600;
     }
 
@@ -594,37 +580,37 @@ else
     .btn-select-all, .btn-deselect-all {
         padding: 8px 16px;
         border: none;
-        border-radius: 10px;
+        border-radius: 5px;
         cursor: pointer;
         font-size: 13px;
         font-weight: 600;
     }
 
     .btn-select-all {
-        background: var(--apple-blue);
+        background: #0d6efd;
         color: white;
     }
 
         .btn-select-all:hover {
-            background: var(--apple-blue);
+            background: #0b5ed7;
         }
 
     .btn-deselect-all {
-        background: var(--apple-text-secondary);
+        background: #6c757d;
         color: white;
     }
 
         .btn-deselect-all:hover {
-            background: var(--apple-text-secondary);
+            background: #5a6268;
         }
 
     .error-message {
-        background: rgba(255, 69, 58, 0.15);
-        color: var(--apple-red);
+        background: #f8d7da;
+        color: #842029;
         padding: 12px;
-        border-radius: 10px;
+        border-radius: 5px;
         margin-bottom: 15px;
-        border: 1px solid rgba(255, 69, 58, 0.3);
+        border: 1px solid #f5c2c7;
         font-size: 14px;
         font-weight: 500;
     }
@@ -639,37 +625,37 @@ else
     .btn-cancel, .btn-save, .btn-return-confirm {
         padding: 10px 24px;
         border: none;
-        border-radius: 10px;
+        border-radius: 5px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
     }
 
     .btn-cancel {
-        background: var(--apple-text-secondary);
+        background: #6c757d;
         color: white;
     }
 
         .btn-cancel:hover {
-            background: var(--apple-text-secondary);
+            background: #5a6268;
         }
 
     .btn-save {
-        background: var(--apple-green);
+        background: #198754;
         color: white;
     }
 
         .btn-save:hover {
-            background: var(--apple-green);
+            background: #157347;
         }
 
     .btn-return-confirm {
-        background: var(--apple-orange);
+        background: #fd7e14;
         color: white;
     }
 
         .btn-return-confirm:hover {
-            background: var(--apple-orange);
+            background: #e36209;
         }
 
         .btn-return-confirm:disabled {
@@ -710,7 +696,6 @@ else
         // Загружаем товары для каждой продажи отдельным запросом
         var saleIds = sales.Select(s => s.Id).ToList();
         var products = await context.Products
-            .Include(p => p.Service)
             .Where(p => p.SaleId != null && saleIds.Contains(p.SaleId.Value))
             .ToListAsync();
 
@@ -872,7 +857,6 @@ else
             {
                 product.Status = "Возврат";  // Товар еще не получен физически
                 // НЕ обнуляем SaleId - товар все еще привязан к продаже
-                product.ServiceId = null;  // Убираем услугу при возврате
                 product.UpdatedAt = DateTime.UtcNow;
                 context.Entry(product).State = EntityState.Modified;
             }

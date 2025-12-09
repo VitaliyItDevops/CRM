@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using bryx_CRM.Data;
@@ -11,9 +12,11 @@ using bryx_CRM.Data;
 namespace bryx_CRM.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251209202525_AddServiceCategoriesTable")]
+    partial class AddServiceCategoriesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -379,9 +382,6 @@ namespace bryx_CRM.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("ServiceId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("SoldFor")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -418,8 +418,6 @@ namespace bryx_CRM.Migrations
                     b.HasIndex("PurchaseId");
 
                     b.HasIndex("SaleId");
-
-                    b.HasIndex("ServiceId");
 
                     b.HasIndex("Status");
 
@@ -892,15 +890,9 @@ namespace bryx_CRM.Migrations
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("bryx_CRM.Data.Models.Service", "Service")
-                        .WithMany()
-                        .HasForeignKey("ServiceId");
-
                     b.Navigation("Purchase");
 
                     b.Navigation("Sale");
-
-                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("bryx_CRM.Data.Models.Purchase", b =>

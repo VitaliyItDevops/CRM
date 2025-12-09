@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using bryx_CRM.Data;
@@ -11,9 +12,11 @@ using bryx_CRM.Data;
 namespace bryx_CRM.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251209201522_AddServicesTable")]
+    partial class AddServicesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -379,9 +382,6 @@ namespace bryx_CRM.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("ServiceId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("SoldFor")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -418,8 +418,6 @@ namespace bryx_CRM.Migrations
                     b.HasIndex("PurchaseId");
 
                     b.HasIndex("SaleId");
-
-                    b.HasIndex("ServiceId");
 
                     b.HasIndex("Status");
 
@@ -657,42 +655,6 @@ namespace bryx_CRM.Migrations
                     b.ToTable("Services", (string)null);
                 });
 
-            modelBuilder.Entity("bryx_CRM.Data.Models.ServiceCategory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("ServiceCategories", (string)null);
-                });
-
             modelBuilder.Entity("bryx_CRM.Data.Models.Subcategory", b =>
                 {
                     b.Property<int>("Id")
@@ -892,15 +854,9 @@ namespace bryx_CRM.Migrations
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("bryx_CRM.Data.Models.Service", "Service")
-                        .WithMany()
-                        .HasForeignKey("ServiceId");
-
                     b.Navigation("Purchase");
 
                     b.Navigation("Sale");
-
-                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("bryx_CRM.Data.Models.Purchase", b =>

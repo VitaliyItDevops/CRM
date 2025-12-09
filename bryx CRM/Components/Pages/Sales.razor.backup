@@ -129,7 +129,6 @@ else
                                         <th>Категория</th>
                                         <th>Поставщик</th>
                                         <th>Цена продажи</th>
-                                        <th>Услуга</th>
                                         <th>Статус</th>
                                         <th>Действия</th>
                                     </tr>
@@ -143,19 +142,6 @@ else
                                             <td>@product.Category</td>
                                             <td>@product.Supplier</td>
                                             <td>@product.SalePrice.ToString("N0") ₽</td>
-                                            <td>
-                                                @if (product.Service != null)
-                                                {
-                                                    <div style="font-size: 0.9rem;">
-                                                        <strong>@product.Service.Name</strong><br/>
-                                                        <span style="color: var(--apple-text-secondary);">@product.Service.Price.ToString("N0") ₽</span>
-                                                    </div>
-                                                }
-                                                else
-                                                {
-                                                    <span style="color: var(--apple-text-tertiary);">-</span>
-                                                }
-                                            </td>
                                             <td>
                                                 <span class="product-status-badge status-@product.Status.ToLower().Replace(" ", "-")">
                                                     @product.Status
@@ -347,84 +333,12 @@ else
                                         }
                                     </div>
                                 }
-
-                                @* Услуги *@
-                                @if (!item.IsAccessory)
-                                {
-                                    <button class="btn-accessories" style="margin-left: 10px;" @onclick="@(() => ToggleServices(index))">
-                                        @(expandedServicesIndex == index ? "▼" : "▶") Услуги
-                                    </button>
-                                }
-
-                                @if (!item.IsAccessory && expandedServicesIndex == index)
-                                {
-                                    <div class="accessories-list">
-                                        @if (item.ServiceId.HasValue)
-                                        {
-                                            <div class="service-attached">
-                                                <div class="service-info">
-                                                    <strong>@item.ServiceName</strong>
-                                                    <span class="service-category">@item.ServiceCategory</span>
-                                                    <span class="service-price">@item.ServicePrice?.ToString("N0") ₽</span>
-                                                </div>
-                                                <button class="btn-remove-service" @onclick="@(() => RemoveServiceFromCart(index))">
-                                                    ✖ Убрать
-                                                </button>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <div class="service-selector">
-                                                <div class="form-group">
-                                                    <label>Категория услуги:</label>
-                                                    <select @bind="selectedServiceCategory" @bind:after="@(() => LoadServicesForCategory())" class="form-select">
-                                                        <option value="">-- Выберите категорию --</option>
-                                                        @if (availableServiceCategories != null)
-                                                        {
-                                                            @foreach (var category in availableServiceCategories)
-                                                            {
-                                                                <option value="@category">@category</option>
-                                                            }
-                                                        }
-                                                    </select>
-                                                </div>
-
-                                                @if (!string.IsNullOrEmpty(selectedServiceCategory) && availableServices != null)
-                                                {
-                                                    <div class="form-group">
-                                                        <label>Услуга:</label>
-                                                        <select @bind="selectedServiceId" class="form-select">
-                                                            <option value="">-- Выберите услугу --</option>
-                                                            @foreach (var service in availableServices)
-                                                            {
-                                                                <option value="@service.Id">@service.Name (@service.Price.ToString("N0") ₽)</option>
-                                                            }
-                                                        </select>
-                                                    </div>
-
-                                                    @if (selectedServiceId.HasValue)
-                                                    {
-                                                        <button class="btn-add-accessory" @onclick="@(() => AttachServiceToCart(index))">
-                                                            + Добавить услугу
-                                                        </button>
-                                                    }
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                }
                             </div>
                         }
                     </div>
 
                     <div class="cart-total">
-                        <strong>Итого:</strong> @(cartItems.Sum(i => (i.SalePrice * i.Quantity) + (i.ServicePrice ?? 0)).ToString("N0")) ₽
-                        @if (cartItems.Any(i => i.ServiceId.HasValue))
-                        {
-                            <div style="font-size: 0.9rem; color: var(--apple-text-secondary); margin-top: 5px;">
-                                (включая услуги: @cartItems.Where(i => i.ServiceId.HasValue).Sum(i => i.ServicePrice ?? 0).ToString("N0") ₽)
-                            </div>
-                        }
+                        <strong>Итого:</strong> @cartItems.Sum(i => i.SalePrice * i.Quantity).ToString("N0") ₽
                     </div>
                 }
             </div>
@@ -497,7 +411,7 @@ else
         }
 
     .btn-reset-filters {
-        background: var(--apple-text-secondary);
+        background: #6c757d;
         color: white;
         border: none;
         padding: 10px 20px;
@@ -510,7 +424,7 @@ else
     }
 
         .btn-reset-filters:hover {
-            background: var(--apple-text-secondary);
+            background: #5a6268;
         }
 
     .no-sales {
@@ -540,7 +454,7 @@ else
         }
 
         .sale-card.expanded {
-            border-color: var(--apple-blue);
+            border-color: #667eea;
         }
 
     .sale-header {
@@ -577,13 +491,13 @@ else
 
     .expand-icon {
         font-size: 20px;
-        color: var(--apple-blue);
+        color: #667eea;
         font-weight: bold;
     }
 
     .sale-content {
         padding: 0 20px 20px 20px;
-        border-top: 1px solid var(--apple-border);
+        border-top: 1px solid #dee2e6;
         animation: slideDown 0.3s ease;
     }
 
@@ -627,7 +541,7 @@ else
         }
 
         .products-table thead {
-            background: var(--apple-bg-tertiary);
+            background: #e9ecef;
         }
 
         .products-table th {
@@ -710,7 +624,7 @@ else
     }
 
     .product-return {
-        background: rgba(255, 69, 58, 0.1) !important;
+        background: #fff5f5 !important;
     }
 
     .btn-mark-received {
@@ -800,22 +714,13 @@ else
         border-radius: 10px;
         font-size: 14px;
         box-sizing: border-box;
-        background-color: var(--apple-bg-tertiary) !important;
-        color: var(--apple-text-primary) !important;
     }
 
         .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
             border-color: var(--apple-blue);
-            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3);
-            background-color: var(--apple-bg-elevated) !important;
-            color: var(--apple-text-primary) !important;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
-
-    .form-select option {
-        background-color: var(--apple-bg-tertiary);
-        color: var(--apple-text-primary);
-    }
 
     .item-selector {
         background: var(--apple-gradient-card);
@@ -858,12 +763,12 @@ else
     }
 
     .btn-cancel-small {
-        background: var(--apple-text-secondary);
+        background: #6c757d;
         color: white;
     }
 
         .btn-cancel-small:hover {
-            background: var(--apple-text-secondary);
+            background: #5a6268;
         }
 
     .btn-add-small {
@@ -876,9 +781,8 @@ else
         }
 
         .btn-add-small:disabled {
-            background: var(--apple-text-tertiary);
+            background: #ccc;
             cursor: not-allowed;
-            opacity: 0.5;
         }
 
     .cart-items {
@@ -987,7 +891,7 @@ else
     .btn-accessories {
         margin-left: 12px;
         margin-top: 5px;
-        background: var(--apple-text-secondary);
+        background: #6c757d;
         color: white;
         border: none;
         padding: 8px 16px;
@@ -999,7 +903,7 @@ else
     }
 
         .btn-accessories:hover {
-            background: var(--apple-text-secondary);
+            background: #5a6268;
         }
 
     .accessories-list {
@@ -1020,7 +924,7 @@ else
     .no-accessories {
         text-align: center;
         padding: 10px;
-        color: var(--apple-text-secondary);
+        color: #999;
     }
 
     .accessory-item {
@@ -1029,7 +933,7 @@ else
         justify-content: space-between;
         padding: 10px;
         background: var(--apple-gradient-card);
-        border: 1px solid var(--apple-border);
+        border: 1px solid #e0e0e0;
         border-radius: 10px;
         margin-bottom: 8px;
     }
@@ -1116,12 +1020,12 @@ else
     }
 
     .btn-cancel {
-        background: var(--apple-text-secondary);
+        background: #6c757d;
         color: white;
     }
 
         .btn-cancel:hover {
-            background: var(--apple-text-secondary);
+            background: #5a6268;
         }
 
     .btn-save {
@@ -1134,9 +1038,8 @@ else
         }
 
         .btn-save:disabled {
-            background: var(--apple-text-tertiary);
+            background: #ccc;
             cursor: not-allowed;
-            opacity: 0.5;
         }
 
     /* Адаптация таблиц для скролла */
@@ -1297,14 +1200,14 @@ else
                 bottom: 10px;
                 left: 50%;
                 transform: translateX(-50%);
-                background: var(--apple-blue);
+                background: rgba(13, 110, 253, 0.9);
                 color: white;
                 padding: 5px 15px;
                 border-radius: 20px;
                 font-size: 11px;
                 font-weight: 600;
                 pointer-events: none;
-                opacity: 0.9;
+                opacity: 0.8;
             }
     }
 
@@ -1413,13 +1316,6 @@ else
     private int? expandedAccessoriesIndex = null;
     private List<Product>? availableAccessories = null;
 
-    // Услуги для товаров
-    private int? expandedServicesIndex = null;
-    private List<string>? availableServiceCategories = null;
-    private List<Service>? availableServices = null;
-    private string selectedServiceCategory = "";
-    private int? selectedServiceId = null;
-
     protected override async Task OnInitializedAsync()
     {
         await LoadSales();
@@ -1481,7 +1377,6 @@ else
         // Используем OriginalSaleId для отображения истории (даже после возврата)
         var saleIds = sales.Select(s => s.Id).ToList();
         var products = await context.Products
-            .Include(p => p.Service)
             .Where(p => p.OriginalSaleId != null && saleIds.Contains(p.OriginalSaleId.Value))
             .ToListAsync();
 
@@ -1785,92 +1680,6 @@ else
         StateHasChanged();
     }
 
-    private async Task ToggleServices(int index)
-    {
-        if (expandedServicesIndex == index)
-        {
-            // Скрываем услуги
-            expandedServicesIndex = null;
-            availableServiceCategories = null;
-            availableServices = null;
-            selectedServiceCategory = "";
-            selectedServiceId = null;
-        }
-        else
-        {
-            // Показываем услуги
-            expandedServicesIndex = index;
-            await LoadServiceCategories();
-        }
-        StateHasChanged();
-    }
-
-    private async Task LoadServiceCategories()
-    {
-        using var context = await DbContextFactory.CreateDbContextAsync();
-
-        availableServiceCategories = await context.ServiceCategories
-            .OrderBy(sc => sc.Name)
-            .Select(sc => sc.Name)
-            .ToListAsync();
-    }
-
-    private async Task LoadServicesForCategory()
-    {
-        if (string.IsNullOrEmpty(selectedServiceCategory))
-        {
-            availableServices = null;
-            selectedServiceId = null;
-            return;
-        }
-
-        using var context = await DbContextFactory.CreateDbContextAsync();
-
-        availableServices = await context.Services
-            .Where(s => s.Category == selectedServiceCategory)
-            .OrderBy(s => s.Name)
-            .ToListAsync();
-
-        selectedServiceId = null;
-    }
-
-    private void AttachServiceToCart(int cartItemIndex)
-    {
-        if (!selectedServiceId.HasValue || cartItemIndex < 0 || cartItemIndex >= cartItems.Count)
-            return;
-
-        var service = availableServices?.FirstOrDefault(s => s.Id == selectedServiceId.Value);
-        if (service == null)
-            return;
-
-        var item = cartItems[cartItemIndex];
-        item.ServiceId = service.Id;
-        item.ServiceName = service.Name;
-        item.ServiceCategory = service.Category;
-        item.ServicePrice = service.Price;
-
-        // Сбрасываем выбор
-        selectedServiceCategory = "";
-        selectedServiceId = null;
-        availableServices = null;
-
-        StateHasChanged();
-    }
-
-    private void RemoveServiceFromCart(int cartItemIndex)
-    {
-        if (cartItemIndex < 0 || cartItemIndex >= cartItems.Count)
-            return;
-
-        var item = cartItems[cartItemIndex];
-        item.ServiceId = null;
-        item.ServiceName = null;
-        item.ServiceCategory = null;
-        item.ServicePrice = null;
-
-        StateHasChanged();
-    }
-
     private async Task CompleteSale()
     {
         saleError = "";
@@ -1909,7 +1718,7 @@ else
                 TTN = string.IsNullOrWhiteSpace(ttn) ? null : ttn.Trim(),
                 SoldThrough = string.IsNullOrWhiteSpace(soldThrough) ? null : soldThrough.Trim(),
                 AdditionalService = string.IsNullOrWhiteSpace(additionalService) ? null : additionalService.Trim(),
-                TotalAmount = cartItems.Sum(i => (i.SalePrice * i.Quantity) + (i.ServicePrice ?? 0)),
+                TotalAmount = cartItems.Sum(i => i.SalePrice * i.Quantity),
                 // Status будет установлен из значения по умолчанию модели = "Ожидает"
                 CreatedAt = DateTime.UtcNow
             };
@@ -1959,7 +1768,6 @@ else
                     product.SaleDate = saleDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
                     product.SaleId = sale.Id;
                     product.OriginalSaleId = sale.Id; // Сохраняем для истории
-                    product.ServiceId = cartItem.ServiceId; // Привязываем услугу если она выбрана
                     product.UpdatedAt = DateTime.UtcNow;
                 }
             }
@@ -2017,11 +1825,5 @@ else
         public decimal SalePrice { get; set; }
         public int Quantity { get; set; } = 1;
         public bool IsAccessory { get; set; } = false;
-
-        // Связанная услуга
-        public int? ServiceId { get; set; }
-        public string? ServiceName { get; set; }
-        public string? ServiceCategory { get; set; }
-        public decimal? ServicePrice { get; set; }
     }
 }

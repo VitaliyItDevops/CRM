@@ -9,10 +9,7 @@ main {
     background-color: var(--apple-bg-primary);
 }
 
-.sidebar {
-    background: linear-gradient(180deg, #1c1c1e 0%, #000000 100%);
-    border-right: 1px solid var(--apple-border);
-}
+/* Sidebar styles are now in NavMenu.razor.css */
 
 .top-row {
     background-color: var(--apple-bg-secondary);
@@ -54,13 +51,6 @@ main {
 @media (min-width: 641px) {
     .page {
         flex-direction: row;
-    }
-
-    .sidebar {
-        width: 250px;
-        height: 100vh;
-        position: sticky;
-        top: 0;
     }
 
     .top-row {

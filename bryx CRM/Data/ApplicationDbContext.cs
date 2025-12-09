@@ -17,6 +17,8 @@ namespace bryx_CRM.Data
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<Sale> Sales { get; set; }
         public DbSet<Purchase> Purchases { get; set; }
+        public DbSet<Service> Services { get; set; }
+        public DbSet<ServiceCategory> ServiceCategories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -96,6 +98,26 @@ namespace bryx_CRM.Data
                     .WithOne(p => p.Purchase)
                     .HasForeignKey(p => p.PurchaseId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // Настройки для таблицы Services
+            modelBuilder.Entity<Service>(entity =>
+            {
+                entity.ToTable("Services");
+
+                entity.HasIndex(e => e.Category);
+                entity.HasIndex(e => e.Name);
+
+                entity.Property(e => e.Price)
+                    .HasPrecision(18, 2);
+            });
+
+            // Настройки для таблицы ServiceCategories
+            modelBuilder.Entity<ServiceCategory>(entity =>
+            {
+                entity.ToTable("ServiceCategories");
+
+                entity.HasIndex(e => e.Name).IsUnique();
             });
 
             // Добавляем тестовые категории

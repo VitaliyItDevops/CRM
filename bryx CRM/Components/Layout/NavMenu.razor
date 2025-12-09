@@ -1,48 +1,92 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">bryx CRM</a>
+@rendermode InteractiveServer
+
+<div class="sidebar @(isCollapsed ? "collapsed" : "")">
+    <div class="toggle-button-container">
+        <button class="toggle-button" @onclick="ToggleMenu" title="@(isCollapsed ? "Развернуть меню" : "Свернуть меню")">
+            <span class="bi @(isCollapsed ? "bi-chevron-right-nav-menu" : "bi-chevron-left-nav-menu")"></span>
+        </button>
+    </div>
+
+    <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+    <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+        <nav class="nav flex-column">
+
+            <!-- Главная -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                    <span class="nav-icon bi bi-house-door-fill-nav-menu" aria-hidden="true"></span>
+                    @if (!isCollapsed)
+                    {
+                        <span class="nav-text">Главная</span>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- Склад -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/warehouse">
+                    <span class="nav-icon bi bi-box-seam-fill-nav-menu" aria-hidden="true"></span>
+                    @if (!isCollapsed)
+                    {
+                        <span class="nav-text">Склад</span>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- Продажи -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/sales">
+                    <span class="nav-icon bi bi-cash-stack-nav-menu" aria-hidden="true"></span>
+                    @if (!isCollapsed)
+                    {
+                        <span class="nav-text">Продажи</span>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- Закупка -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/purchase">
+                    <span class="nav-icon bi bi-cart-plus-fill-nav-menu" aria-hidden="true"></span>
+                    @if (!isCollapsed)
+                    {
+                        <span class="nav-text">Закупка</span>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- Движение -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/movement">
+                    <span class="nav-icon bi bi-arrow-left-right-nav-menu" aria-hidden="true"></span>
+                    @if (!isCollapsed)
+                    {
+                        <span class="nav-text">Движение</span>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- Услуги -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/services">
+                    <span class="nav-icon bi bi-tools-nav-menu" aria-hidden="true"></span>
+                    @if (!isCollapsed)
+                    {
+                        <span class="nav-text">Услуги</span>
+                    }
+                </NavLink>
+            </div>
+
+        </nav>
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+@code {
+    private bool isCollapsed = false;
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-
-        <!-- Главная -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Главная
-            </NavLink>
-        </div>
-
-        <!-- Склад -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/warehouse">
-                <span class="bi bi-box-seam-fill-nav-menu" aria-hidden="true"></span> Склад
-            </NavLink>
-        </div>
-
-        <!-- Продажи -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/sales">
-                <span class="bi bi-cash-stack-nav-menu" aria-hidden="true"></span> Продажи
-            </NavLink>
-        </div>
-
-        <!-- Закупка -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/purchase">
-                <span class="bi bi-cart-plus-fill-nav-menu" aria-hidden="true"></span> Закупка
-            </NavLink>
-        </div>
-
-        <!-- Движение -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/movement">
-                <span class="bi bi-arrow-left-right-nav-menu" aria-hidden="true"></span> Движение
-            </NavLink>
-        </div>
-
-    </nav>
-</div>
+    private void ToggleMenu()
+    {
+        isCollapsed = !isCollapsed;
+    }
+}

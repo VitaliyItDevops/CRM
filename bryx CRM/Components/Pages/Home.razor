@@ -544,10 +544,202 @@
 </div>
 
 <style>
+    /* Apple Dark Theme Colors */
+    :root {
+        --apple-dark-bg: #1c1c1e;
+        --apple-dark-secondary: #2c2c2e;
+        --apple-dark-tertiary: #3a3a3c;
+        --apple-text-primary: #f5f5f7;
+        --apple-text-secondary: #98989d;
+        --apple-text-tertiary: #636366;
+        --apple-border: rgba(255, 255, 255, 0.1);
+        --apple-separator: rgba(84, 84, 88, 0.65);
+    }
+
+    /* Dark Cards */
+    .card {
+        background-color: var(--apple-dark-bg) !important;
+        border: 1px solid var(--apple-border) !important;
+        color: var(--apple-text-primary) !important;
+    }
+
+    .card-header {
+        background-color: var(--apple-dark-bg) !important;
+        border-bottom: 1px solid var(--apple-border) !important;
+        color: var(--apple-text-primary) !important;
+    }
+
+    .card-body {
+        background-color: var(--apple-dark-bg) !important;
+        color: var(--apple-text-primary) !important;
+    }
+
+    .card-title {
+        color: var(--apple-text-primary) !important;
+    }
+
+    /* Text Colors */
+    h1, h2, h3, h4, h5, h6 {
+        color: var(--apple-text-primary) !important;
+    }
+
+    .text-muted {
+        color: var(--apple-text-secondary) !important;
+    }
+
+    small {
+        color: var(--apple-text-secondary) !important;
+    }
+
+    /* Tables */
+    .table {
+        color: var(--apple-text-primary) !important;
+    }
+
+    .table-light {
+        background-color: var(--apple-dark-secondary) !important;
+        color: var(--apple-text-primary) !important;
+    }
+
+    .table-light th {
+        background-color: var(--apple-dark-secondary) !important;
+        color: var(--apple-text-secondary) !important;
+        border-color: var(--apple-border) !important;
+    }
+
+    .table > :not(caption) > * > * {
+        border-bottom-color: var(--apple-border) !important;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: var(--apple-dark-secondary) !important;
+        color: var(--apple-text-primary) !important;
+    }
+
+    /* List Groups */
+    .list-group-item {
+        background-color: var(--apple-dark-bg) !important;
+        color: var(--apple-text-primary) !important;
+        border-color: var(--apple-border) !important;
+    }
+
+    .list-group-item:hover {
+        background-color: var(--apple-dark-secondary) !important;
+    }
+
+    /* Forms */
+    .form-control, .form-select {
+        background-color: var(--apple-dark-secondary) !important;
+        border: 1px solid var(--apple-border) !important;
+        color: var(--apple-text-primary) !important;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: var(--apple-dark-tertiary) !important;
+        border-color: #0a84ff !important;
+        color: var(--apple-text-primary) !important;
+        box-shadow: 0 0 0 0.25rem rgba(10, 132, 255, 0.25) !important;
+    }
+
+    .form-control::placeholder {
+        color: var(--apple-text-tertiary) !important;
+    }
+
+    .form-label {
+        color: var(--apple-text-secondary) !important;
+    }
+
+    /* Backgrounds */
+    .bg-light {
+        background-color: var(--apple-dark-secondary) !important;
+        color: var(--apple-text-primary) !important;
+    }
+
+    /* Progress Bars */
+    .progress {
+        background-color: var(--apple-dark-secondary) !important;
+    }
+
+    /* Metric Cards with Icons */
+    .bg-success.bg-opacity-10 {
+        background-color: rgba(48, 209, 88, 0.15) !important;
+    }
+
+    .bg-warning.bg-opacity-10 {
+        background-color: rgba(255, 214, 10, 0.15) !important;
+    }
+
+    .bg-info.bg-opacity-10 {
+        background-color: rgba(100, 210, 255, 0.15) !important;
+    }
+
+    .bg-primary.bg-opacity-10 {
+        background-color: rgba(10, 132, 255, 0.15) !important;
+    }
+
+    /* Badge Styling */
+    .badge {
+        font-weight: 500 !important;
+    }
+
+    .bg-success-subtle {
+        background-color: rgba(48, 209, 88, 0.2) !important;
+        color: #32d74b !important;
+    }
+
+    .bg-warning-subtle {
+        background-color: rgba(255, 214, 10, 0.2) !important;
+        color: #ffd60a !important;
+    }
+
+    .bg-info-subtle {
+        background-color: rgba(100, 210, 255, 0.2) !important;
+        color: #64d2ff !important;
+    }
+
+    .bg-primary-subtle {
+        background-color: rgba(10, 132, 255, 0.2) !important;
+        color: #0a84ff !important;
+    }
+
+    .text-success {
+        color: #32d74b !important;
+    }
+
+    .text-warning {
+        color: #ffd60a !important;
+    }
+
+    .text-info {
+        color: #64d2ff !important;
+    }
+
+    .text-primary {
+        color: #0a84ff !important;
+    }
+
+    /* Chart Container */
     .chart-container {
         position: relative;
         height: 350px;
         width: 100%;
+    }
+
+    /* Alerts */
+    .alert-danger {
+        background-color: rgba(255, 69, 58, 0.15) !important;
+        border-color: rgba(255, 69, 58, 0.3) !important;
+        color: #ff453a !important;
+    }
+
+    .alert-success {
+        background-color: rgba(48, 209, 88, 0.15) !important;
+        border-color: rgba(48, 209, 88, 0.3) !important;
+        color: #32d74b !important;
+    }
+
+    .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
     }
 
     /* Мобильные устройства */
@@ -612,6 +804,11 @@
         // Определяем, мобильное ли это устройство
         const isMobile = window.innerWidth < 768;
 
+        // Apple Dark Theme colors
+        const textColor = '#f5f5f7';
+        const gridColor = 'rgba(255, 255, 255, 0.1)';
+        const tooltipBg = 'rgba(44, 44, 46, 0.95)';
+
         // Создаем столбчатый график с несколькими метриками
         chartInstances[canvasId] = new Chart(ctx, {
             type: 'bar',
@@ -624,14 +821,24 @@
                         display: true,
                         position: isMobile ? 'bottom' : 'top',
                         labels: {
+                            color: textColor,
                             boxWidth: isMobile ? 8 : 12,
                             padding: isMobile ? 5 : 10,
-                            font: { size: isMobile ? 8 : 10 }
+                            font: {
+                                size: isMobile ? 8 : 10,
+                                family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                            }
                         }
                     },
                     tooltip: {
                         enabled: true,
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        backgroundColor: tooltipBg,
+                        titleColor: textColor,
+                        bodyColor: textColor,
+                        borderColor: gridColor,
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true,
                         callbacks: {
                             label: function(context) {
                                 let label = context.dataset.label || '';
@@ -654,18 +861,31 @@
                 scales: {
                     x: {
                         grid: {
-                            display: false
+                            display: false,
+                            color: gridColor
                         },
                         ticks: {
-                            font: { size: isMobile ? 9 : 11 },
+                            color: textColor,
+                            font: {
+                                size: isMobile ? 9 : 11,
+                                family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                            },
                             maxRotation: isMobile ? 45 : 0,
                             minRotation: isMobile ? 45 : 0
                         }
                     },
                     y: {
                         beginAtZero: true,
+                        grid: {
+                            color: gridColor,
+                            drawBorder: false
+                        },
                         ticks: {
-                            font: { size: isMobile ? 9 : 10 },
+                            color: textColor,
+                            font: {
+                                size: isMobile ? 9 : 10,
+                                family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                            },
                             callback: function(value) {
                                 return new Intl.NumberFormat('ru-RU', {
                                     notation: 'compact',

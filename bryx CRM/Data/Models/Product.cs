@@ -89,5 +89,9 @@ namespace bryx_CRM.Data.Models
 
         // Оригинальная продажа (для истории, никогда не обнуляется)
         public int? OriginalSaleId { get; set; }
+
+        // Связь с услугой
+        public int? ServiceId { get; set; }
+        public Service? Service { get; set; }
     }
 }

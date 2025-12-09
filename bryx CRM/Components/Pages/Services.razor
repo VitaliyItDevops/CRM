@@ -1,0 +1,1119 @@
+@page "/services"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using bryx_CRM.Data
+@using bryx_CRM.Data.Models
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Услуги - bryx CRM</PageTitle>
+
+<h3>Услуги</h3>
+
+<div class="header-actions">
+    <button class="btn-add-category" @onclick="ShowAddCategoryModal">+ Добавить категорию</button>
+</div>
+
+@if (selectedCategory == null)
+{
+    <div class="categories-grid">
+        @foreach (var category in categories)
+        {
+            <div class="category-card" @onclick="@(() => SelectCategory(category))">
+                <div class="category-icon">💼</div>
+                <h4>@category.Name</h4>
+                <p class="item-count">@GetServiceCount(category.Name) услуг</p>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="category-detail">
+        <button class="btn-back" @onclick="GoBack">← Назад к категориям</button>
+
+        <div class="category-header">
+            <h4>@selectedCategory</h4>
+            <button class="btn-add-service" @onclick="ShowAddServiceModal">+ Добавить услугу</button>
+        </div>
+
+        <div class="filters-panel">
+            <div class="filter-group">
+                <label>🔍 Поиск по названию:</label>
+                <input type="text" @bind="searchName" @bind:event="oninput" placeholder="Введите название..." class="filter-input" />
+            </div>
+
+            <div class="filter-group">
+                <label>📊 Сортировка:</label>
+                <select @bind="sortOption" class="filter-select">
+                    <option value="name-asc">По алфавиту (А-Я)</option>
+                    <option value="name-desc">По алфавиту (Я-А)</option>
+                    <option value="price-asc">По цене (дешевые → дорогие)</option>
+                    <option value="price-desc">По цене (дорогие → дешевые)</option>
+                    <option value="date-desc">По дате создания (новые → старые)</option>
+                    <option value="date-asc">По дате создания (старые → новые)</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>💰 Цена от:</label>
+                <input type="number" @bind="priceFrom" @bind:event="oninput" placeholder="0" class="filter-input" min="0" step="0.01" />
+            </div>
+
+            <div class="filter-group">
+                <label>💰 Цена до:</label>
+                <input type="number" @bind="priceTo" @bind:event="oninput" placeholder="∞" class="filter-input" min="0" step="0.01" />
+            </div>
+
+            <div class="filter-group">
+                <label>📅 Дата от:</label>
+                <input type="date" @bind="dateFrom" @bind:event="oninput" class="filter-input" />
+            </div>
+
+            <div class="filter-group">
+                <label>📅 Дата до:</label>
+                <input type="date" @bind="dateTo" @bind:event="oninput" class="filter-input" />
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Цена</th>
+                        <th>Дата создания</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (filteredServices == null)
+                    {
+                        <tr>
+                            <td colspan="4">Загрузка...</td>
+                        </tr>
+                    }
+                    else if (!filteredServices.Any())
+                    {
+                        <tr>
+                            <td colspan="4">Нет услуг по выбранным фильтрам</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var service in filteredServices)
+                        {
+                            <tr>
+                                <td class="service-name">@service.Name</td>
+                                <td class="price">@service.Price.ToString("N2") ₴</td>
+                                <td class="date-cell">@service.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                                <td class="actions-cell">
+                                    <button @onclick="@(() => ShowEditServiceModal(service))" class="btn-edit" title="Редактировать">
+                                        ✏️
+                                    </button>
+                                    <button @onclick="@(() => ShowDeleteConfirmModal(service))" class="btn-delete" title="Удалить">
+                                        🗑️
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@* Модальное окно добавления категории *@
+@if (showAddCategoryModal)
+{
+    <div class="modal-overlay" @onclick="CloseAddCategoryModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Добавить новую категорию</h4>
+
+            <div class="form-group">
+                <label>Название категории:</label>
+                <input type="text" @bind="newCategoryName" placeholder="Например: Установка ПО" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Описание (необязательно):</label>
+                <textarea @bind="newCategoryDescription" placeholder="Описание категории..." class="form-textarea" rows="3"></textarea>
+            </div>
+
+            @if (!string.IsNullOrEmpty(categoryError))
+            {
+                <div class="error-message">@categoryError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseAddCategoryModal">Отмена</button>
+                <button class="btn-save" @onclick="SaveCategory">Сохранить</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Модальное окно добавления услуги *@
+@if (showAddServiceModal)
+{
+    <div class="modal-overlay" @onclick="CloseAddServiceModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Добавить новую услугу</h4>
+
+            <div class="form-group">
+                <label>Категория:</label>
+                <input type="text" value="@selectedCategory" class="form-input" disabled />
+            </div>
+
+            <div class="form-group">
+                <label>Название услуги:</label>
+                <input type="text" @bind="newServiceName" placeholder="Например: Установка Windows" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Цена (₴):</label>
+                <input type="number" @bind="newServicePrice" placeholder="0.00" step="0.01" min="0" class="form-input" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(serviceError))
+            {
+                <div class="error-message">@serviceError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseAddServiceModal">Отмена</button>
+                <button class="btn-save" @onclick="SaveService">Сохранить</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Модальное окно редактирования услуги *@
+@if (showEditServiceModal && editingService != null)
+{
+    <div class="modal-overlay" @onclick="CloseEditServiceModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Редактировать услугу</h4>
+
+            <div class="form-group">
+                <label>Категория:</label>
+                <input type="text" value="@selectedCategory" class="form-input" disabled />
+            </div>
+
+            <div class="form-group">
+                <label>Название услуги:</label>
+                <input type="text" @bind="editServiceName" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Цена (₴):</label>
+                <input type="number" @bind="editServicePrice" step="0.01" min="0" class="form-input" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(serviceError))
+            {
+                <div class="error-message">@serviceError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseEditServiceModal">Отмена</button>
+                <button class="btn-save" @onclick="UpdateService">Сохранить</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Модальное окно подтверждения удаления *@
+@if (showDeleteConfirmModal && deletingService != null)
+{
+    <div class="modal-overlay" @onclick="CloseDeleteConfirmModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Подтверждение удаления</h4>
+
+            <p>Вы уверены, что хотите удалить услугу <strong>"@deletingService.Name"</strong>?</p>
+            <p>Это действие нельзя отменить.</p>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseDeleteConfirmModal">Отмена</button>
+                <button class="btn-delete-confirm" @onclick="DeleteService">Удалить</button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    /* Apple Dark Theme Colors */
+    :root {
+        --apple-dark-bg: #1c1c1e;
+        --apple-dark-secondary: #2c2c2e;
+        --apple-bg-tertiary: #3a3a3c;
+        --apple-bg-elevated: #48484a;
+        --apple-text-primary: #f5f5f7;
+        --apple-text-secondary: #98989d;
+        --apple-border: rgba(255, 255, 255, 0.1);
+        --apple-gradient-blue: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%);
+        --apple-green: #30d158;
+        --apple-red: #ff453a;
+        --apple-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    h3 {
+        color: var(--apple-text-primary) !important;
+    }
+
+    .header-actions {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-add-category {
+        background: var(--apple-gradient-blue);
+        color: white;
+        border: none;
+        padding: 12px 28px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .btn-add-category:hover {
+            background: var(--apple-gradient-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-add-category:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
+        }
+
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .category-card {
+        background: var(--apple-dark-bg);
+        border: 2px solid var(--apple-border);
+        border-radius: 8px;
+        padding: 30px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+        .category-card:hover {
+            background: var(--apple-dark-secondary);
+            border-color: #0a84ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+        }
+
+    .category-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    .category-card h4 {
+        margin: 10px 0 5px 0;
+        color: var(--apple-text-primary);
+    }
+
+    .item-count {
+        color: var(--apple-text-secondary);
+        font-size: 14px;
+        margin: 0;
+    }
+
+    /* Category Detail */
+    .category-detail {
+        margin-top: 20px;
+    }
+
+    .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+        .category-header h4 {
+            margin: 0;
+        }
+
+    .btn-back {
+        background: var(--apple-text-secondary);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-bottom: 20px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+
+        .btn-back:hover {
+            background: #86868b;
+        }
+
+    .btn-add-service {
+        background: var(--apple-gradient-blue);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+    }
+
+        .btn-add-service:hover {
+            background: var(--apple-gradient-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-add-service:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
+        }
+
+    /* Filters Panel */
+    .filters-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 20px;
+        background: var(--apple-dark-secondary);
+        border-radius: 8px;
+        border: 1px solid var(--apple-border);
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .filter-group label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--apple-text-primary);
+        }
+
+    .filter-input, .filter-select {
+        padding: 10px 12px;
+        border: 1px solid var(--apple-border);
+        border-radius: 8px;
+        background: var(--apple-dark-bg);
+        color: var(--apple-text-primary);
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+        .filter-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: #0a84ff;
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+        }
+
+    .filter-select {
+        cursor: pointer;
+    }
+
+    /* Table Styles */
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        position: relative;
+        background: var(--apple-dark-bg);
+    }
+
+    .table {
+        width: 100%;
+        min-width: 600px;
+        border-collapse: collapse;
+        background: var(--apple-dark-bg);
+    }
+
+        .table th {
+            background: var(--apple-dark-secondary);
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 2px solid var(--apple-border);
+            font-weight: 600;
+            white-space: nowrap;
+            font-size: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            color: var(--apple-text-primary);
+        }
+
+        .table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--apple-border);
+            font-size: 14px;
+            color: var(--apple-text-primary);
+        }
+
+            .table td.service-name {
+                min-width: 150px;
+                font-weight: 500;
+                color: var(--apple-text-primary);
+            }
+
+            .table td.price {
+                color: var(--apple-green);
+                font-weight: 600;
+            }
+
+            .table td.date-cell {
+                color: var(--apple-text-secondary);
+            }
+
+            .table td.actions-cell {
+                white-space: nowrap;
+            }
+
+    .btn-edit, .btn-delete {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 5px 10px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-edit:hover {
+        transform: scale(1.2);
+    }
+
+    .btn-delete:hover {
+        transform: scale(1.2);
+    }
+
+    .btn-delete-confirm {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        background: var(--apple-red);
+        color: white;
+    }
+
+        .btn-delete-confirm:hover {
+            background: #ff3b30;
+        }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: var(--apple-dark-bg);
+        padding: 30px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        border: 1px solid var(--apple-border);
+    }
+
+        .modal-content h4 {
+            margin: 0 0 20px 0;
+            color: var(--apple-text-primary);
+            position: sticky;
+            top: -30px;
+            background: var(--apple-dark-bg);
+            padding: 0 0 15px 0;
+            z-index: 1;
+        }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--apple-text-primary);
+        }
+
+    .form-input, .form-textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
+        background: var(--apple-dark-secondary);
+        color: var(--apple-text-primary);
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #0a84ff;
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+        }
+
+        .form-input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .form-textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .error-message {
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        border: 1px solid rgba(255, 69, 58, 0.3);
+        font-size: 14px;
+        font-weight: 500;
+        animation: shake 0.3s ease;
+    }
+
+    @@keyframes shake {
+        0%, 100% {
+            transform: translateX(0);
+        }
+
+        25% {
+            transform: translateX(-5px);
+        }
+
+        75% {
+            transform: translateX(5px);
+        }
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        position: sticky;
+        bottom: -30px;
+        background: var(--apple-dark-bg);
+        padding: 15px 0 0 0;
+        margin-top: 20px;
+        z-index: 1;
+    }
+
+    .btn-cancel, .btn-save {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-cancel {
+        background: var(--apple-text-secondary);
+        color: white;
+    }
+
+        .btn-cancel:hover {
+            background: #86868b;
+        }
+
+    .btn-save {
+        background: var(--apple-green);
+        color: white;
+    }
+
+        .btn-save:hover {
+            background: #28cd4c;
+        }
+</style>
+
+@code {
+    private List<ServiceCategory> categories = new();
+    private string? selectedCategory = null;
+    private List<Service>? services = null;
+    private List<Service>? filteredServices = null;
+
+    // Category modal state
+    private bool showAddCategoryModal = false;
+    private string newCategoryName = "";
+    private string newCategoryDescription = "";
+    private string categoryError = "";
+
+    // Service modal state
+    private bool showAddServiceModal = false;
+    private string newServiceName = "";
+    private decimal newServicePrice = 0;
+    private string serviceError = "";
+
+    // Edit service modal state
+    private bool showEditServiceModal = false;
+    private Service? editingService = null;
+    private string editServiceName = "";
+    private decimal editServicePrice = 0;
+
+    // Delete confirm modal state
+    private bool showDeleteConfirmModal = false;
+    private Service? deletingService = null;
+
+    // Filters
+    private string _searchName = "";
+    private string searchName
+    {
+        get => _searchName;
+        set
+        {
+            _searchName = value;
+            ApplyFilters();
+        }
+    }
+
+    private string _sortOption = "name-asc";
+    private string sortOption
+    {
+        get => _sortOption;
+        set
+        {
+            _sortOption = value;
+            ApplyFilters();
+        }
+    }
+
+    private decimal? _priceFrom = null;
+    private decimal? priceFrom
+    {
+        get => _priceFrom;
+        set
+        {
+            _priceFrom = value;
+            ApplyFilters();
+        }
+    }
+
+    private decimal? _priceTo = null;
+    private decimal? priceTo
+    {
+        get => _priceTo;
+        set
+        {
+            _priceTo = value;
+            ApplyFilters();
+        }
+    }
+
+    private DateTime? _dateFrom = null;
+    private DateTime? dateFrom
+    {
+        get => _dateFrom;
+        set
+        {
+            _dateFrom = value;
+            ApplyFilters();
+        }
+    }
+
+    private DateTime? _dateTo = null;
+    private DateTime? dateTo
+    {
+        get => _dateTo;
+        set
+        {
+            _dateTo = value;
+            ApplyFilters();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        categories = await context.ServiceCategories
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+    }
+
+    private int GetServiceCount(string category)
+    {
+        using var context = DbContextFactory.CreateDbContext();
+        return context.Services.Count(s => s.Category == category);
+    }
+
+    private async Task SelectCategory(ServiceCategory category)
+    {
+        selectedCategory = category.Name;
+        await LoadServices();
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task LoadServices()
+    {
+        if (selectedCategory != null)
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            services = await context.Services
+                .Where(s => s.Category == selectedCategory)
+                .ToListAsync();
+        }
+    }
+
+    private void GoBack()
+    {
+        selectedCategory = null;
+        services = null;
+        filteredServices = null;
+        searchName = "";
+        sortOption = "name-asc";
+        priceFrom = null;
+        priceTo = null;
+        dateFrom = null;
+        dateTo = null;
+        StateHasChanged();
+    }
+
+    private void ApplyFilters()
+    {
+        if (services == null)
+        {
+            filteredServices = null;
+            return;
+        }
+
+        var filtered = services.AsEnumerable();
+
+        // Фильтр по названию
+        if (!string.IsNullOrWhiteSpace(searchName))
+        {
+            filtered = filtered.Where(s => s.Name.Contains(searchName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Фильтр по цене
+        if (priceFrom.HasValue)
+        {
+            filtered = filtered.Where(s => s.Price >= priceFrom.Value);
+        }
+        if (priceTo.HasValue)
+        {
+            filtered = filtered.Where(s => s.Price <= priceTo.Value);
+        }
+
+        // Фильтр по дате создания
+        if (dateFrom.HasValue)
+        {
+            filtered = filtered.Where(s => s.CreatedAt.Date >= dateFrom.Value.Date);
+        }
+        if (dateTo.HasValue)
+        {
+            filtered = filtered.Where(s => s.CreatedAt.Date <= dateTo.Value.Date);
+        }
+
+        // Сортировка
+        filtered = sortOption switch
+        {
+            "name-asc" => filtered.OrderBy(s => s.Name),
+            "name-desc" => filtered.OrderByDescending(s => s.Name),
+            "price-asc" => filtered.OrderBy(s => s.Price),
+            "price-desc" => filtered.OrderByDescending(s => s.Price),
+            "date-asc" => filtered.OrderBy(s => s.CreatedAt),
+            "date-desc" => filtered.OrderByDescending(s => s.CreatedAt),
+            _ => filtered.OrderBy(s => s.Name)
+        };
+
+        filteredServices = filtered.ToList();
+        StateHasChanged();
+    }
+
+    private void ShowAddCategoryModal()
+    {
+        showAddCategoryModal = true;
+        newCategoryName = "";
+        newCategoryDescription = "";
+        categoryError = "";
+        StateHasChanged();
+    }
+
+    private void CloseAddCategoryModal()
+    {
+        showAddCategoryModal = false;
+        newCategoryName = "";
+        newCategoryDescription = "";
+        categoryError = "";
+        StateHasChanged();
+    }
+
+    private async Task SaveCategory()
+    {
+        categoryError = "";
+        StateHasChanged();
+
+        if (string.IsNullOrWhiteSpace(newCategoryName))
+        {
+            categoryError = "Название категории обязательно!";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var trimmedName = newCategoryName.Trim();
+
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var exists = await context.ServiceCategories
+                .AnyAsync(c => c.Name.ToLower() == trimmedName.ToLower());
+
+            if (exists)
+            {
+                categoryError = "Категория с таким названием уже существует!";
+                StateHasChanged();
+                return;
+            }
+
+            var category = new ServiceCategory
+            {
+                Name = trimmedName,
+                Description = string.IsNullOrWhiteSpace(newCategoryDescription)
+                    ? null
+                    : newCategoryDescription.Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.ServiceCategories.Add(category);
+            await context.SaveChangesAsync();
+
+            await LoadCategories();
+
+            CloseAddCategoryModal();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await LoadCategories();
+            categoryError = "Категория была изменена другим пользователем. Пожалуйста, попробуйте снова.";
+            StateHasChanged();
+        }
+        catch (DbUpdateException)
+        {
+            categoryError = "Категория с таким названием уже существует!";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            categoryError = $"Ошибка: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private void ShowAddServiceModal()
+    {
+        showAddServiceModal = true;
+        newServiceName = "";
+        newServicePrice = 0;
+        serviceError = "";
+        StateHasChanged();
+    }
+
+    private void CloseAddServiceModal()
+    {
+        showAddServiceModal = false;
+        newServiceName = "";
+        newServicePrice = 0;
+        serviceError = "";
+        StateHasChanged();
+    }
+
+    private async Task SaveService()
+    {
+        serviceError = "";
+        StateHasChanged();
+
+        if (string.IsNullOrWhiteSpace(newServiceName))
+        {
+            serviceError = "Название услуги обязательно!";
+            StateHasChanged();
+            return;
+        }
+
+        if (newServicePrice <= 0)
+        {
+            serviceError = "Цена должна быть больше нуля!";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var trimmedName = newServiceName.Trim();
+
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var service = new Service
+            {
+                Name = trimmedName,
+                Category = selectedCategory!,
+                Price = newServicePrice,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.Services.Add(service);
+            await context.SaveChangesAsync();
+
+            await LoadServices();
+
+            CloseAddServiceModal();
+        }
+        catch (Exception ex)
+        {
+            serviceError = $"Ошибка: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private void ShowEditServiceModal(Service service)
+    {
+        editingService = service;
+        editServiceName = service.Name;
+        editServicePrice = service.Price;
+        serviceError = "";
+        showEditServiceModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseEditServiceModal()
+    {
+        showEditServiceModal = false;
+        editingService = null;
+        editServiceName = "";
+        editServicePrice = 0;
+        serviceError = "";
+        StateHasChanged();
+    }
+
+    private async Task UpdateService()
+    {
+        serviceError = "";
+        StateHasChanged();
+
+        if (string.IsNullOrWhiteSpace(editServiceName))
+        {
+            serviceError = "Название услуги обязательно!";
+            StateHasChanged();
+            return;
+        }
+
+        if (editServicePrice <= 0)
+        {
+            serviceError = "Цена должна быть больше нуля!";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var trimmedName = editServiceName.Trim();
+
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var service = await context.Services.FindAsync(editingService!.Id);
+            if (service != null)
+            {
+                service.Name = trimmedName;
+                service.Price = editServicePrice;
+                service.UpdatedAt = DateTime.UtcNow;
+
+                await context.SaveChangesAsync();
+
+                await LoadServices();
+                ApplyFilters();
+
+                CloseEditServiceModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            serviceError = $"Ошибка: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private void ShowDeleteConfirmModal(Service service)
+    {
+        deletingService = service;
+        showDeleteConfirmModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteConfirmModal()
+    {
+        showDeleteConfirmModal = false;
+        deletingService = null;
+        StateHasChanged();
+    }
+
+    private async Task DeleteService()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var service = await context.Services.FindAsync(deletingService!.Id);
+            if (service != null)
+            {
+                context.Services.Remove(service);
+                await context.SaveChangesAsync();
+
+                await LoadServices();
+                ApplyFilters();
+
+                CloseDeleteConfirmModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            serviceError = $"Ошибка при удалении: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+}
