@@ -1005,7 +1005,8 @@ else
                 return;
             }
 
-            var originalSaleId = productToUpdate.OriginalSaleId;
+            // Сохраняем ID продажи ДО обнуления
+            var saleIdToCheck = productToUpdate.OriginalSaleId ?? productToUpdate.SaleId;
 
             // Меняем статус на "В наличии" - товар физически вернулся на склад
             productToUpdate.Status = "В наличии";
@@ -1017,21 +1018,21 @@ else
             context.Entry(productToUpdate).State = EntityState.Modified;
 
             // Проверяем, остались ли товары на возврате для этой продажи
-            if (originalSaleId.HasValue)
+            if (saleIdToCheck.HasValue)
             {
                 var remainingReturns = await context.Products
-                    .Where(p => p.OriginalSaleId == originalSaleId.Value && p.Status == "Возврат")
+                    .Where(p => (p.OriginalSaleId == saleIdToCheck.Value || p.SaleId == saleIdToCheck.Value) && p.Status == "Возврат")
                     .CountAsync();
 
                 // Если больше нет товаров на возврате, обновляем статус продажи
                 if (remainingReturns == 0)
                 {
-                    var sale = await context.Sales.FindAsync(originalSaleId.Value);
+                    var sale = await context.Sales.FindAsync(saleIdToCheck.Value);
                     if (sale != null)
                     {
                         // Проверяем, остались ли товары связанные с продажей (не возвращенные)
                         var remainingProducts = await context.Products
-                            .Where(p => p.OriginalSaleId == originalSaleId.Value && p.SaleId != null)
+                            .Where(p => (p.OriginalSaleId == saleIdToCheck.Value || p.SaleId == saleIdToCheck.Value) && p.SaleId != null)
                             .ToListAsync();
 
                         if (remainingProducts.Count == 0)

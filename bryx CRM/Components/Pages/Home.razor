@@ -1323,10 +1323,10 @@
             totalRevenue = completedSales.Sum(s => s.TotalAmount);
             Console.WriteLine($"💰 DEBUG: Общая выручка: {totalRevenue:N2}");
 
-            // 2. Затраты на товары = цена закупки товаров, которые в продажах
-            var soldProductsInSales = allProducts.Where(p => p.SaleId != null).ToList();
+            // 2. Затраты на товары = цена закупки товаров, которые РЕАЛЬНО проданы (статус "Продано")
+            var soldProductsInSales = allProducts.Where(p => p.Status == "Продано").ToList();
             var productCosts = soldProductsInSales.Sum(p => p.PurchasePrice);
-            Console.WriteLine($"📦 DEBUG: Товаров в продажах: {soldProductsInSales.Count}, Затраты на товары: {productCosts:N2}");
+            Console.WriteLine($"📦 DEBUG: Товаров проданных: {soldProductsInSales.Count}, Затраты на товары: {productCosts:N2}");
 
             // 3. Расходы = все расходы из таблицы Expenses
             var allExpenses = await context.Expenses.ToListAsync();
