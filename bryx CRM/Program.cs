@@ -95,14 +95,42 @@ using (var scope = app.Services.CreateScope())
     {
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        Console.WriteLine("🔄 Начинаем применение миграций...");
+
+        // Проверяем pending миграции
+        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+        var pendingList = pendingMigrations.ToList();
+
+        if (pendingList.Any())
+        {
+            Console.WriteLine($"📋 Найдено {pendingList.Count} неприменённых миграций:");
+            foreach (var migration in pendingList)
+            {
+                Console.WriteLine($"   - {migration}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("ℹ️ Нет неприменённых миграций");
+        }
+
         // Применить все pending миграции
         await context.Database.MigrateAsync();
         Console.WriteLine("✅ Миграции базы данных применены успешно");
+
+        // Проверяем применённые миграции
+        var appliedMigrations = await context.Database.GetAppliedMigrationsAsync();
+        Console.WriteLine($"✅ Всего применено миграций: {appliedMigrations.Count()}");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"⚠️ Ошибка при применении миграций: {ex.Message}");
+        Console.WriteLine($"❌ КРИТИЧЕСКАЯ ОШИБКА при применении миграций: {ex.Message}");
         Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+        }
+        throw; // Останавливаем приложение при ошибке миграций
     }
 }
 
