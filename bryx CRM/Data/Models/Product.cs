@@ -35,7 +35,7 @@ public partial class Product
 
     public string? SoldThrough { get; set; }
 
-    public string? Ttn { get; set; }
+    public string? TTN { get; set; }
 
     public decimal? PlannedPrice { get; set; }
 
@@ -53,7 +53,7 @@ public partial class Product
 
     public decimal? ExchangeRate { get; set; }
 
-    public decimal? PriceInUsd { get; set; }
+    public decimal? PriceInUSD { get; set; }
 
     public string? Subcategory { get; set; }
 

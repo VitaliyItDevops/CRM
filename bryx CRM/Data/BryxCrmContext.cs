@@ -156,7 +156,7 @@ public partial class BryxCrmContext : DbContext
             entity.Property(e => e.IsFavorite).HasDefaultValue(false);
             entity.Property(e => e.Name).HasMaxLength(200);
             entity.Property(e => e.PlannedPrice).HasPrecision(18, 2);
-            entity.Property(e => e.PriceInUsd)
+            entity.Property(e => e.PriceInUSD)
                 .HasPrecision(18, 2)
                 .HasColumnName("PriceInUSD");
             entity.Property(e => e.PurchasePrice).HasPrecision(18, 2);
@@ -166,7 +166,7 @@ public partial class BryxCrmContext : DbContext
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.Subcategory).HasMaxLength(100);
             entity.Property(e => e.Supplier).HasMaxLength(200);
-            entity.Property(e => e.Ttn)
+            entity.Property(e => e.TTN)
                 .HasMaxLength(100)
                 .HasColumnName("TTN");
 
@@ -191,10 +191,10 @@ public partial class BryxCrmContext : DbContext
                 .HasDefaultValueSql("''::character varying");
             entity.Property(e => e.Subcategory).HasMaxLength(100);
             entity.Property(e => e.Supplier).HasMaxLength(200);
-            entity.Property(e => e.TotalPriceUah)
+            entity.Property(e => e.TotalPriceUAH)
                 .HasPrecision(18, 2)
                 .HasColumnName("TotalPriceUAH");
-            entity.Property(e => e.TotalPriceUsd)
+            entity.Property(e => e.TotalPriceUSD)
                 .HasPrecision(18, 2)
                 .HasColumnName("TotalPriceUSD");
         });
@@ -206,7 +206,7 @@ public partial class BryxCrmContext : DbContext
             entity.Property(e => e.SoldThrough).HasMaxLength(200);
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
-            entity.Property(e => e.Ttn)
+            entity.Property(e => e.TTN)
                 .HasMaxLength(100)
                 .HasColumnName("TTN");
         });

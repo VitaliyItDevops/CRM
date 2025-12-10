@@ -13,11 +13,11 @@ public partial class Purchase
 
     public string Supplier { get; set; } = null!;
 
-    public decimal TotalPriceUsd { get; set; }
+    public decimal TotalPriceUSD { get; set; }
 
     public decimal ExchangeRate { get; set; }
 
-    public decimal TotalPriceUah { get; set; }
+    public decimal TotalPriceUAH { get; set; }
 
     public int Quantity { get; set; }
 

@@ -11,7 +11,7 @@ public partial class Sale
 
     public DateTime SaleDate { get; set; }
 
-    public string? Ttn { get; set; }
+    public string? TTN { get; set; }
 
     public string? SoldThrough { get; set; }
 
