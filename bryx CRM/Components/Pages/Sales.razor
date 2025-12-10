@@ -89,7 +89,10 @@ else
                             <span class="status-badge @GetStatusClass(sale.Status)">@GetStatusText(sale.Status)</span>
                         </div>
                     </div>
-                    <div class="expand-icon">
+                    <div class="expand-icon" style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn-delete-small" @onclick="@(() => ShowDeleteSaleModal(sale))" @onclick:stopPropagation="true" title="Удалить продажу">
+                            🗑️
+                        </button>
                         @if (expandedSaleId == sale.Id)
                         {
                             <span>▼</span>
@@ -437,6 +440,32 @@ else
             <div class="modal-actions">
                 <button class="btn-cancel" @onclick="CloseAddSaleModal">Отмена</button>
                 <button class="btn-save" @onclick="CompleteSale" disabled="@(!cartItems.Any())">Продать</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showDeleteSaleModal && saleToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CloseDeleteSaleModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Удалить продажу?</h4>
+            <p>Вы уверены, что хотите удалить эту продажу?</p>
+            <div style="margin: 15px 0; padding: 15px; background: var(--apple-surface); border-radius: 8px;">
+                <p><strong>Покупатель:</strong> @saleToDelete.Buyer</p>
+                <p><strong>Сумма:</strong> @saleToDelete.TotalAmount.ToString("N0") ₽</p>
+                <p><strong>Дата:</strong> @saleToDelete.SaleDate.ToLocalTime().ToString("dd.MM.yyyy")</p>
+            </div>
+            <p style="color: var(--apple-red); font-size: 13px;">⚠️ Товары из этой продажи вернутся в статус "В наличии"</p>
+
+            @if (!string.IsNullOrEmpty(deleteError))
+            {
+                <div class="error-message">@deleteError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseDeleteSaleModal">Отмена</button>
+                <button class="btn-delete" @onclick="DeleteSale">Удалить</button>
             </div>
         </div>
     </div>
@@ -1139,6 +1168,30 @@ else
             opacity: 0.5;
         }
 
+    .btn-delete {
+        background: var(--apple-red);
+        color: white;
+    }
+
+        .btn-delete:hover {
+            background: #c53030;
+        }
+
+    .btn-delete-small {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 5px 8px;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+
+        .btn-delete-small:hover {
+            background: rgba(255, 59, 48, 0.1);
+            transform: scale(1.1);
+        }
+
     /* Адаптация таблиц для скролла */
     .products-table {
         overflow-x: auto;
@@ -1396,6 +1449,11 @@ else
     private string soldThrough = "";
     private string additionalService = "";
     private string saleError = "";
+
+    // Модальное окно удаления продажи
+    private bool showDeleteSaleModal = false;
+    private Sale? saleToDelete = null;
+    private string deleteError = "";
 
     // Категории и товары
     private List<string> categories = new List<string>();
@@ -2005,6 +2063,64 @@ else
         {
             // В случае ошибки можно добавить логирование
             Console.WriteLine($"Ошибка при обновлении статуса: {ex.Message}");
+        }
+    }
+
+    private void ShowDeleteSaleModal(Sale sale)
+    {
+        saleToDelete = sale;
+        showDeleteSaleModal = true;
+        deleteError = "";
+    }
+
+    private void CloseDeleteSaleModal()
+    {
+        showDeleteSaleModal = false;
+        saleToDelete = null;
+        deleteError = "";
+    }
+
+    private async Task DeleteSale()
+    {
+        if (saleToDelete == null) return;
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Находим продажу с товарами
+            var sale = await context.Sales
+                .Include(s => s.Products)
+                .FirstOrDefaultAsync(s => s.Id == saleToDelete.Id);
+
+            if (sale == null)
+            {
+                deleteError = "Продажа не найдена";
+                return;
+            }
+
+            // Возвращаем товары в статус "В наличии"
+            foreach (var product in sale.Products)
+            {
+                product.Status = "В наличии";
+                product.SaleId = null;
+                product.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Удаляем продажу
+            context.Sales.Remove(sale);
+            await context.SaveChangesAsync();
+
+            // Закрываем модальное окно и обновляем список
+            CloseDeleteSaleModal();
+            await LoadSales();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            deleteError = $"Ошибка при удалении: {ex.Message}";
+            Console.WriteLine($"Ошибка при удалении продажи: {ex.Message}");
         }
     }
 
