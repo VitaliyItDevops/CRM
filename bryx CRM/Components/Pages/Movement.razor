@@ -775,11 +775,15 @@ else
             sale.Status = "Получено";
             sale.UpdatedAt = DateTime.UtcNow;
 
-            // Обновляем статус всех товаров в продаже
+            // Обновляем статус товаров в продаже (кроме возвратов)
             foreach (var product in sale.Products)
             {
-                product.Status = "Продано";
-                product.UpdatedAt = DateTime.UtcNow;
+                // Не трогаем товары на возврате - они обрабатываются отдельно
+                if (product.Status != "Возврат")
+                {
+                    product.Status = "Продано";
+                    product.UpdatedAt = DateTime.UtcNow;
+                }
             }
 
             await context.SaveChangesAsync();
