@@ -1,44 +1,31 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
-namespace bryx_CRM.Data.Models
+namespace bryx_CRM.Data.Models;
+
+public partial class Sale
 {
-    public class Sale
-    {
-        [Key]
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        [Required]
-        [MaxLength(200)]
-        public string Buyer { get; set; } = string.Empty;
+    public string Buyer { get; set; } = null!;
 
-        [Required]
-        public DateTime SaleDate { get; set; }
+    public DateTime SaleDate { get; set; }
 
-        [MaxLength(100)]
-        public string? TTN { get; set; }
+    public string? Ttn { get; set; }
 
-        [MaxLength(200)]
-        public string? SoldThrough { get; set; }
+    public string? SoldThrough { get; set; }
 
-        [MaxLength(300)]
-        public string? AdditionalService { get; set; }
+    public string? AdditionalService { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal TotalAmount { get; set; }
+    public decimal TotalAmount { get; set; }
 
-        [Required]
-        [MaxLength(50)]
-        public string Status { get; set; } = "Ожидает";
+    public string Status { get; set; } = null!;
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
 
-        public DateTime? UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-        [Timestamp]
-        public byte[]? RowVersion { get; set; }
+    public byte[]? RowVersion { get; set; }
 
-        // Навигационное свойство для связи с товарами
-        public ICollection<Product> Products { get; set; } = new List<Product>();
-    }
+    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 }

@@ -1,0 +1,1467 @@
+@page "/expenses"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using bryx_CRM.Data
+@using bryx_CRM.Data.Models
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Расходы - bryx CRM</PageTitle>
+
+<h3>Расходы</h3>
+
+<div class="header-actions">
+    <button class="btn-add-category" @onclick="ShowAddCategoryModal">+ Добавить категорию</button>
+</div>
+
+@if (selectedCategory == null)
+{
+    <div class="categories-grid">
+        @foreach (var category in categories)
+        {
+            <div class="category-card" @onclick="@(() => SelectCategory(category))">
+                <div class="category-icon">💰</div>
+                <h4>@category.Name</h4>
+                <p class="item-count">@GetExpenseCount(category.Name) расходов</p>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="category-detail">
+        <button class="btn-back" @onclick="GoBack">← Назад к категориям</button>
+
+        <div class="category-header">
+            <h4>@selectedCategory</h4>
+            <button class="btn-add-expense" @onclick="ShowAddExpenseModal">+ Добавить расход</button>
+        </div>
+
+        <div class="summary-section">
+            <button class="btn-toggle-summary" @onclick="ToggleSummary">
+                @(showSummary ? "▼" : "▶") Сводка по расходам (@GetUniqueExpenseCount() уникальных)
+            </button>
+
+            @if (showSummary && expenseSummary != null && expenseSummary.Any())
+            {
+                <div class="summary-table-wrapper">
+                    <table class="summary-table">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Количество</th>
+                                <th>Общая сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var summary in expenseSummary)
+                            {
+                                <tr>
+                                    <td class="summary-name">@summary.Name</td>
+                                    <td class="summary-count">@summary.Count шт</td>
+                                    <td class="summary-amount">@summary.TotalAmount.ToString("N2") ₴</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        <div class="filters-panel">
+            <div class="filter-group">
+                <label>🔍 Поиск по названию:</label>
+                <input type="text" @bind="searchName" @bind:event="oninput" placeholder="Введите название..." class="filter-input" />
+            </div>
+
+            <div class="filter-group">
+                <label>📊 Сортировка:</label>
+                <select @bind="sortOption" class="filter-select">
+                    <option value="name-asc">По алфавиту (А-Я)</option>
+                    <option value="name-desc">По алфавиту (Я-А)</option>
+                    <option value="amount-asc">По сумме (меньше → больше)</option>
+                    <option value="amount-desc">По сумме (больше → меньше)</option>
+                    <option value="date-desc">По дате (новые → старые)</option>
+                    <option value="date-asc">По дате (старые → новые)</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>💵 Сумма от:</label>
+                <input type="number" @bind="amountFrom" @bind:event="oninput" placeholder="0" class="filter-input" min="0" step="0.01" />
+            </div>
+
+            <div class="filter-group">
+                <label>💵 Сумма до:</label>
+                <input type="number" @bind="amountTo" @bind:event="oninput" placeholder="∞" class="filter-input" min="0" step="0.01" />
+            </div>
+
+            <div class="filter-group">
+                <label>📅 Дата от:</label>
+                <input type="date" @bind="dateFrom" @bind:event="oninput" class="filter-input" />
+            </div>
+
+            <div class="filter-group">
+                <label>📅 Дата до:</label>
+                <input type="date" @bind="dateTo" @bind:event="oninput" class="filter-input" />
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Описание</th>
+                        <th>Сумма</th>
+                        <th>Дата расхода</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (filteredExpenses == null)
+                    {
+                        <tr>
+                            <td colspan="5">Загрузка...</td>
+                        </tr>
+                    }
+                    else if (!filteredExpenses.Any())
+                    {
+                        <tr>
+                            <td colspan="5">Нет расходов по выбранным фильтрам</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var expense in filteredExpenses)
+                        {
+                            <tr>
+                                <td class="expense-name">@expense.Name</td>
+                                <td class="description">@(string.IsNullOrEmpty(expense.Description) ? "-" : expense.Description)</td>
+                                <td class="amount">@expense.Amount.ToString("N2") ₴</td>
+                                <td class="date-cell">@expense.ExpenseDate.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                                <td class="actions-cell">
+                                    <button @onclick="@(() => ShowEditExpenseModal(expense))" class="btn-edit" title="Редактировать">
+                                        ✏️
+                                    </button>
+                                    <button @onclick="@(() => ShowDeleteConfirmModal(expense))" class="btn-delete" title="Удалить">
+                                        🗑️
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@* Модальное окно добавления категории *@
+@if (showAddCategoryModal)
+{
+    <div class="modal-overlay" @onclick="CloseAddCategoryModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Добавить новую категорию</h4>
+
+            <div class="form-group">
+                <label>Название категории:</label>
+                <input type="text" @bind="newCategoryName" placeholder="Например: Зарплата" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Описание (необязательно):</label>
+                <textarea @bind="newCategoryDescription" placeholder="Описание категории..." class="form-textarea" rows="3"></textarea>
+            </div>
+
+            @if (!string.IsNullOrEmpty(categoryError))
+            {
+                <div class="error-message">@categoryError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseAddCategoryModal">Отмена</button>
+                <button class="btn-save" @onclick="SaveCategory">Сохранить</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Модальное окно добавления расхода *@
+@if (showAddExpenseModal)
+{
+    <div class="modal-overlay" @onclick="CloseAddExpenseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Добавить новый расход</h4>
+
+            <div class="form-group">
+                <label>Категория:</label>
+                <input type="text" value="@selectedCategory" class="form-input" disabled />
+            </div>
+
+            <div class="form-group">
+                <label>Название расхода:</label>
+                @if (!isManualExpenseNameEntry)
+                {
+                    <select @bind="selectedExpenseName" class="form-select">
+                        <option value="">🖊️ Внести вручную</option>
+                        @foreach (var name in existingExpenseNames)
+                        {
+                            <option value="@name">@name</option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <input type="text"
+                           @bind="newExpenseName"
+                           placeholder="Введите название расхода..."
+                           class="form-input" />
+                }
+                <button type="button"
+                        class="btn-toggle-input"
+                        @onclick="ToggleManualExpenseNameEntry">
+                    @(isManualExpenseNameEntry ? "📋 Выбрать из списка" : "🖊️ Внести вручную")
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label>Описание (необязательно):</label>
+                <textarea @bind="newExpenseDescription" placeholder="Дополнительная информация..." class="form-textarea" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Сумма (₴):</label>
+                <input type="number" @bind="newExpenseAmount" placeholder="0.00" step="0.01" min="0" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Дата расхода:</label>
+                <input type="date" @bind="newExpenseDate" class="form-input" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(expenseError))
+            {
+                <div class="error-message">@expenseError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseAddExpenseModal">Отмена</button>
+                <button class="btn-save" @onclick="SaveExpense">Сохранить</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Модальное окно редактирования расхода *@
+@if (showEditExpenseModal && editingExpense != null)
+{
+    <div class="modal-overlay" @onclick="CloseEditExpenseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Редактировать расход</h4>
+
+            <div class="form-group">
+                <label>Категория:</label>
+                <input type="text" value="@selectedCategory" class="form-input" disabled />
+            </div>
+
+            <div class="form-group">
+                <label>Название расхода:</label>
+                <input type="text" @bind="editExpenseName" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Описание (необязательно):</label>
+                <textarea @bind="editExpenseDescription" class="form-textarea" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Сумма (₴):</label>
+                <input type="number" @bind="editExpenseAmount" step="0.01" min="0" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Дата расхода:</label>
+                <input type="date" @bind="editExpenseDate" class="form-input" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(expenseError))
+            {
+                <div class="error-message">@expenseError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseEditExpenseModal">Отмена</button>
+                <button class="btn-save" @onclick="UpdateExpense">Сохранить</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Модальное окно подтверждения удаления *@
+@if (showDeleteConfirmModal && deletingExpense != null)
+{
+    <div class="modal-overlay" @onclick="CloseDeleteConfirmModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <h4>Подтверждение удаления</h4>
+
+            <p>Вы уверены, что хотите удалить расход <strong>"@deletingExpense.Name"</strong>?</p>
+            <p>Это действие нельзя отменить.</p>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseDeleteConfirmModal">Отмена</button>
+                <button class="btn-delete-confirm" @onclick="DeleteExpense">Удалить</button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    /* Apple Dark Theme Colors */
+    :root {
+        --apple-dark-bg: #1c1c1e;
+        --apple-dark-secondary: #2c2c2e;
+        --apple-bg-tertiary: #3a3a3c;
+        --apple-bg-elevated: #48484a;
+        --apple-text-primary: #f5f5f7;
+        --apple-text-secondary: #98989d;
+        --apple-border: rgba(255, 255, 255, 0.1);
+        --apple-gradient-blue: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%);
+        --apple-green: #30d158;
+        --apple-red: #ff453a;
+        --apple-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    h3 {
+        color: var(--apple-text-primary) !important;
+    }
+
+    .header-actions {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-add-category {
+        background: var(--apple-gradient-blue);
+        color: white;
+        border: none;
+        padding: 12px 28px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .btn-add-category:hover {
+            background: var(--apple-gradient-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-add-category:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
+        }
+
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .category-card {
+        background: var(--apple-dark-bg);
+        border: 2px solid var(--apple-border);
+        border-radius: 8px;
+        padding: 30px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+        .category-card:hover {
+            background: var(--apple-dark-secondary);
+            border-color: #0a84ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+        }
+
+    .category-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    .category-card h4 {
+        margin: 10px 0 5px 0;
+        color: var(--apple-text-primary);
+    }
+
+    .item-count {
+        color: var(--apple-text-secondary);
+        font-size: 14px;
+        margin: 0;
+    }
+
+    /* Category Detail */
+    .category-detail {
+        margin-top: 20px;
+    }
+
+    .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+        .category-header h4 {
+            margin: 0;
+        }
+
+    .btn-back {
+        background: var(--apple-text-secondary);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-bottom: 20px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+
+        .btn-back:hover {
+            background: #86868b;
+        }
+
+    .btn-add-expense {
+        background: var(--apple-gradient-blue);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+    }
+
+        .btn-add-expense:hover {
+            background: var(--apple-gradient-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-add-expense:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
+        }
+
+    /* Summary Section */
+    .summary-section {
+        margin: 20px 0;
+    }
+
+    .btn-toggle-summary {
+        background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3);
+        transition: all 0.3s ease;
+        width: 100%;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .btn-toggle-summary:hover {
+            background: linear-gradient(135deg, #5e5ce6 0%, #0a84ff 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(10, 132, 255, 0.5);
+        }
+
+        .btn-toggle-summary:active {
+            transform: translateY(0);
+        }
+
+    .summary-table-wrapper {
+        margin-top: 15px;
+        overflow-x: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        animation: slideDown 0.3s ease;
+        position: relative;
+        -webkit-overflow-scrolling: touch;
+        background: var(--apple-dark-bg);
+    }
+
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .summary-table {
+        width: 100%;
+        min-width: 600px;
+        border-collapse: collapse;
+        background: var(--apple-dark-bg);
+        color: var(--apple-text-primary);
+    }
+
+        .summary-table th {
+            background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%);
+            color: white;
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+            font-size: 14px;
+            border: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .summary-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--apple-border);
+            font-size: 14px;
+            color: var(--apple-text-primary);
+        }
+
+            .summary-table td.summary-name {
+                font-weight: 600;
+                color: var(--apple-text-primary);
+                min-width: 150px;
+            }
+
+            .summary-table td.summary-count {
+                font-weight: 700;
+                color: #0a84ff;
+                font-size: 16px;
+                white-space: nowrap;
+            }
+
+            .summary-table td.summary-amount {
+                font-weight: 700;
+                color: var(--apple-green);
+                font-size: 16px;
+                white-space: nowrap;
+            }
+
+        .summary-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+            .summary-table tbody tr:hover {
+                background: var(--apple-dark-secondary);
+            }
+
+    /* Filters Panel */
+    .filters-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 20px;
+        background: var(--apple-dark-secondary);
+        border-radius: 8px;
+        border: 1px solid var(--apple-border);
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .filter-group label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--apple-text-primary);
+        }
+
+    .filter-input, .filter-select {
+        padding: 10px 12px;
+        border: 1px solid var(--apple-border);
+        border-radius: 8px;
+        background: var(--apple-dark-bg);
+        color: var(--apple-text-primary);
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+        .filter-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: #0a84ff;
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+        }
+
+    .filter-select {
+        cursor: pointer;
+    }
+
+    /* Table Styles */
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        position: relative;
+        background: var(--apple-dark-bg);
+    }
+
+    .table {
+        width: 100%;
+        min-width: 700px;
+        border-collapse: collapse;
+        background: var(--apple-dark-bg);
+    }
+
+        .table th {
+            background: var(--apple-dark-secondary);
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 2px solid var(--apple-border);
+            font-weight: 600;
+            white-space: nowrap;
+            font-size: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            color: var(--apple-text-primary);
+        }
+
+        .table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--apple-border);
+            font-size: 14px;
+            color: var(--apple-text-primary);
+        }
+
+            .table td.expense-name {
+                min-width: 150px;
+                font-weight: 500;
+                color: var(--apple-text-primary);
+            }
+
+            .table td.description {
+                min-width: 200px;
+                color: var(--apple-text-secondary);
+            }
+
+            .table td.amount {
+                color: var(--apple-red);
+                font-weight: 600;
+            }
+
+            .table td.date-cell {
+                color: var(--apple-text-secondary);
+            }
+
+            .table td.actions-cell {
+                white-space: nowrap;
+            }
+
+    .btn-edit, .btn-delete {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 5px 10px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-edit:hover {
+        transform: scale(1.2);
+    }
+
+    .btn-delete:hover {
+        transform: scale(1.2);
+    }
+
+    .btn-delete-confirm {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        background: var(--apple-red);
+        color: white;
+    }
+
+        .btn-delete-confirm:hover {
+            background: #ff3b30;
+        }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: var(--apple-dark-bg);
+        padding: 30px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        border: 1px solid var(--apple-border);
+    }
+
+        .modal-content h4 {
+            margin: 0 0 20px 0;
+            color: var(--apple-text-primary);
+            position: sticky;
+            top: -30px;
+            background: var(--apple-dark-bg);
+            padding: 0 0 15px 0;
+            z-index: 1;
+        }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--apple-text-primary);
+        }
+
+    .form-input, .form-textarea, .form-select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--apple-border);
+        border-radius: 10px;
+        background: var(--apple-dark-secondary);
+        color: var(--apple-text-primary);
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #0a84ff;
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+        }
+
+        .form-input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .form-select {
+        cursor: pointer;
+    }
+
+    .form-textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .btn-toggle-input {
+        width: 100%;
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: var(--apple-bg-tertiary);
+        color: var(--apple-text-secondary);
+        border: 1px solid var(--apple-border);
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+        .btn-toggle-input:hover {
+            background: var(--apple-bg-elevated);
+            color: var(--apple-text-primary);
+            border-color: #0a84ff;
+        }
+
+        .btn-toggle-input:active {
+            transform: scale(0.98);
+        }
+
+    .error-message {
+        background: rgba(255, 69, 58, 0.15);
+        color: var(--apple-red);
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        border: 1px solid rgba(255, 69, 58, 0.3);
+        font-size: 14px;
+        font-weight: 500;
+        animation: shake 0.3s ease;
+    }
+
+    @@keyframes shake {
+        0%, 100% {
+            transform: translateX(0);
+        }
+
+        25% {
+            transform: translateX(-5px);
+        }
+
+        75% {
+            transform: translateX(5px);
+        }
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        position: sticky;
+        bottom: -30px;
+        background: var(--apple-dark-bg);
+        padding: 15px 0 0 0;
+        margin-top: 20px;
+        z-index: 1;
+    }
+
+    .btn-cancel, .btn-save {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-cancel {
+        background: var(--apple-text-secondary);
+        color: white;
+    }
+
+        .btn-cancel:hover {
+            background: #86868b;
+        }
+
+    .btn-save {
+        background: var(--apple-green);
+        color: white;
+    }
+
+        .btn-save:hover {
+            background: #28cd4c;
+        }
+</style>
+
+@code {
+    private List<ExpenseCategory> categories = new();
+    private string? selectedCategory = null;
+    private List<Expense>? expenses = null;
+    private List<Expense>? filteredExpenses = null;
+
+    // Summary state
+    private bool showSummary = false;
+    private List<ExpenseSummary>? expenseSummary = null;
+
+    // Summary class
+    public class ExpenseSummary
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public decimal TotalAmount { get; set; }
+    }
+
+    // Category modal state
+    private bool showAddCategoryModal = false;
+    private string newCategoryName = "";
+    private string newCategoryDescription = "";
+    private string categoryError = "";
+
+    // Expense modal state
+    private bool showAddExpenseModal = false;
+    private string newExpenseName = "";
+    private string newExpenseDescription = "";
+    private decimal newExpenseAmount = 0;
+    private DateTime newExpenseDate = DateTime.Today;
+    private string expenseError = "";
+    private List<string> existingExpenseNames = new();
+    private string selectedExpenseName = "";
+    private bool isManualExpenseNameEntry = false;
+
+    // Edit expense modal state
+    private bool showEditExpenseModal = false;
+    private Expense? editingExpense = null;
+    private string editExpenseName = "";
+    private string editExpenseDescription = "";
+    private decimal editExpenseAmount = 0;
+    private DateTime editExpenseDate = DateTime.Today;
+
+    // Delete confirm modal state
+    private bool showDeleteConfirmModal = false;
+    private Expense? deletingExpense = null;
+
+    // Filters
+    private string _searchName = "";
+    private string searchName
+    {
+        get => _searchName;
+        set
+        {
+            _searchName = value;
+            ApplyFilters();
+        }
+    }
+
+    private string _sortOption = "date-desc";
+    private string sortOption
+    {
+        get => _sortOption;
+        set
+        {
+            _sortOption = value;
+            ApplyFilters();
+        }
+    }
+
+    private decimal? _amountFrom = null;
+    private decimal? amountFrom
+    {
+        get => _amountFrom;
+        set
+        {
+            _amountFrom = value;
+            ApplyFilters();
+        }
+    }
+
+    private decimal? _amountTo = null;
+    private decimal? amountTo
+    {
+        get => _amountTo;
+        set
+        {
+            _amountTo = value;
+            ApplyFilters();
+        }
+    }
+
+    private DateTime? _dateFrom = null;
+    private DateTime? dateFrom
+    {
+        get => _dateFrom;
+        set
+        {
+            _dateFrom = value;
+            ApplyFilters();
+        }
+    }
+
+    private DateTime? _dateTo = null;
+    private DateTime? dateTo
+    {
+        get => _dateTo;
+        set
+        {
+            _dateTo = value;
+            ApplyFilters();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        categories = await context.ExpenseCategories
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+    }
+
+    private int GetExpenseCount(string category)
+    {
+        using var context = DbContextFactory.CreateDbContext();
+        return context.Expenses.Count(e => e.Category == category);
+    }
+
+    private async Task SelectCategory(ExpenseCategory category)
+    {
+        selectedCategory = category.Name;
+        await LoadExpenses();
+        await GenerateExpenseSummary();
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task LoadExpenses()
+    {
+        if (selectedCategory != null)
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            expenses = await context.Expenses
+                .Where(e => e.Category == selectedCategory)
+                .ToListAsync();
+        }
+    }
+
+    private void GoBack()
+    {
+        selectedCategory = null;
+        expenses = null;
+        filteredExpenses = null;
+        showSummary = false;
+        expenseSummary = null;
+        searchName = "";
+        sortOption = "date-desc";
+        amountFrom = null;
+        amountTo = null;
+        dateFrom = null;
+        dateTo = null;
+        StateHasChanged();
+    }
+
+    private void ApplyFilters()
+    {
+        if (expenses == null)
+        {
+            filteredExpenses = null;
+            return;
+        }
+
+        var filtered = expenses.AsEnumerable();
+
+        // Фильтр по названию
+        if (!string.IsNullOrWhiteSpace(searchName))
+        {
+            filtered = filtered.Where(e => e.Name.Contains(searchName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Фильтр по сумме
+        if (amountFrom.HasValue)
+        {
+            filtered = filtered.Where(e => e.Amount >= amountFrom.Value);
+        }
+        if (amountTo.HasValue)
+        {
+            filtered = filtered.Where(e => e.Amount <= amountTo.Value);
+        }
+
+        // Фильтр по дате расхода (конвертируем UTC в локальное время)
+        if (dateFrom.HasValue)
+        {
+            filtered = filtered.Where(e => e.ExpenseDate.ToLocalTime().Date >= dateFrom.Value.Date);
+        }
+        if (dateTo.HasValue)
+        {
+            filtered = filtered.Where(e => e.ExpenseDate.ToLocalTime().Date <= dateTo.Value.Date);
+        }
+
+        // Сортировка
+        filtered = sortOption switch
+        {
+            "name-asc" => filtered.OrderBy(e => e.Name),
+            "name-desc" => filtered.OrderByDescending(e => e.Name),
+            "amount-asc" => filtered.OrderBy(e => e.Amount),
+            "amount-desc" => filtered.OrderByDescending(e => e.Amount),
+            "date-asc" => filtered.OrderBy(e => e.ExpenseDate),
+            "date-desc" => filtered.OrderByDescending(e => e.ExpenseDate),
+            _ => filtered.OrderByDescending(e => e.ExpenseDate)
+        };
+
+        filteredExpenses = filtered.ToList();
+
+        // Обновляем сводку с учетом фильтров
+        _ = GenerateExpenseSummary();
+
+        StateHasChanged();
+    }
+
+    private void ShowAddCategoryModal()
+    {
+        showAddCategoryModal = true;
+        newCategoryName = "";
+        newCategoryDescription = "";
+        categoryError = "";
+        StateHasChanged();
+    }
+
+    private void CloseAddCategoryModal()
+    {
+        showAddCategoryModal = false;
+        newCategoryName = "";
+        newCategoryDescription = "";
+        categoryError = "";
+        StateHasChanged();
+    }
+
+    private async Task SaveCategory()
+    {
+        categoryError = "";
+        StateHasChanged();
+
+        if (string.IsNullOrWhiteSpace(newCategoryName))
+        {
+            categoryError = "Название категории обязательно!";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var trimmedName = newCategoryName.Trim();
+
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var exists = await context.ExpenseCategories
+                .AnyAsync(c => c.Name.ToLower() == trimmedName.ToLower());
+
+            if (exists)
+            {
+                categoryError = "Категория с таким названием уже существует!";
+                StateHasChanged();
+                return;
+            }
+
+            var category = new ExpenseCategory
+            {
+                Name = trimmedName,
+                Description = string.IsNullOrWhiteSpace(newCategoryDescription)
+                    ? null
+                    : newCategoryDescription.Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.ExpenseCategories.Add(category);
+            await context.SaveChangesAsync();
+
+            await LoadCategories();
+
+            CloseAddCategoryModal();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await LoadCategories();
+            categoryError = "Категория была изменена другим пользователем. Пожалуйста, попробуйте снова.";
+            StateHasChanged();
+        }
+        catch (DbUpdateException)
+        {
+            categoryError = "Категория с таким названием уже существует!";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            categoryError = $"Ошибка: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowAddExpenseModal()
+    {
+        // Загружаем уникальные названия расходов из текущей категории
+        if (expenses != null && expenses.Any())
+        {
+            existingExpenseNames = expenses
+                .Select(e => e.Name)
+                .Distinct()
+                .OrderBy(n => n)
+                .ToList();
+        }
+        else
+        {
+            existingExpenseNames = new List<string>();
+        }
+
+        showAddExpenseModal = true;
+        newExpenseName = "";
+        selectedExpenseName = "";
+        isManualExpenseNameEntry = false;
+        newExpenseDescription = "";
+        newExpenseAmount = 0;
+        newExpenseDate = DateTime.Today;
+        expenseError = "";
+        StateHasChanged();
+    }
+
+    private void ToggleManualExpenseNameEntry()
+    {
+        isManualExpenseNameEntry = !isManualExpenseNameEntry;
+
+        // Если переключаемся обратно на список, очищаем ручной ввод
+        if (!isManualExpenseNameEntry)
+        {
+            newExpenseName = "";
+            selectedExpenseName = "";
+        }
+        // Если переключаемся на ручной ввод, очищаем выбранное из списка
+        else
+        {
+            selectedExpenseName = "";
+            newExpenseName = "";
+        }
+
+        StateHasChanged();
+    }
+
+    private void CloseAddExpenseModal()
+    {
+        showAddExpenseModal = false;
+        newExpenseName = "";
+        newExpenseDescription = "";
+        newExpenseAmount = 0;
+        newExpenseDate = DateTime.Today;
+        expenseError = "";
+        StateHasChanged();
+    }
+
+    private async Task SaveExpense()
+    {
+        expenseError = "";
+        StateHasChanged();
+
+        // Определяем название: из списка или ручной ввод
+        string expenseName = isManualExpenseNameEntry ? newExpenseName : selectedExpenseName;
+
+        if (string.IsNullOrWhiteSpace(expenseName))
+        {
+            expenseError = "Название расхода обязательно!";
+            StateHasChanged();
+            return;
+        }
+
+        if (newExpenseAmount <= 0)
+        {
+            expenseError = "Сумма должна быть больше нуля!";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var trimmedName = expenseName.Trim();
+
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var expense = new Expense
+            {
+                Name = trimmedName,
+                Category = selectedCategory!,
+                Description = string.IsNullOrWhiteSpace(newExpenseDescription)
+                    ? null
+                    : newExpenseDescription.Trim(),
+                Amount = newExpenseAmount,
+                ExpenseDate = newExpenseDate.ToUniversalTime(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.Expenses.Add(expense);
+            await context.SaveChangesAsync();
+
+            await LoadExpenses();
+            await GenerateExpenseSummary();
+            ApplyFilters();
+
+            CloseAddExpenseModal();
+        }
+        catch (Exception ex)
+        {
+            expenseError = $"Ошибка: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private void ShowEditExpenseModal(Expense expense)
+    {
+        editingExpense = expense;
+        editExpenseName = expense.Name;
+        editExpenseDescription = expense.Description ?? "";
+        editExpenseAmount = expense.Amount;
+        editExpenseDate = expense.ExpenseDate.ToLocalTime().Date;
+        expenseError = "";
+        showEditExpenseModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseEditExpenseModal()
+    {
+        showEditExpenseModal = false;
+        editingExpense = null;
+        editExpenseName = "";
+        editExpenseDescription = "";
+        editExpenseAmount = 0;
+        editExpenseDate = DateTime.Today;
+        expenseError = "";
+        StateHasChanged();
+    }
+
+    private async Task UpdateExpense()
+    {
+        expenseError = "";
+        StateHasChanged();
+
+        if (string.IsNullOrWhiteSpace(editExpenseName))
+        {
+            expenseError = "Название расхода обязательно!";
+            StateHasChanged();
+            return;
+        }
+
+        if (editExpenseAmount <= 0)
+        {
+            expenseError = "Сумма должна быть больше нуля!";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var trimmedName = editExpenseName.Trim();
+
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var expense = await context.Expenses.FindAsync(editingExpense!.Id);
+            if (expense != null)
+            {
+                expense.Name = trimmedName;
+                expense.Description = string.IsNullOrWhiteSpace(editExpenseDescription)
+                    ? null
+                    : editExpenseDescription.Trim();
+                expense.Amount = editExpenseAmount;
+                expense.ExpenseDate = editExpenseDate.ToUniversalTime();
+                expense.UpdatedAt = DateTime.UtcNow;
+
+                await context.SaveChangesAsync();
+
+                await LoadExpenses();
+                await GenerateExpenseSummary();
+                ApplyFilters();
+
+                CloseEditExpenseModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            expenseError = $"Ошибка: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private void ShowDeleteConfirmModal(Expense expense)
+    {
+        deletingExpense = expense;
+        showDeleteConfirmModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteConfirmModal()
+    {
+        showDeleteConfirmModal = false;
+        deletingExpense = null;
+        StateHasChanged();
+    }
+
+    private async Task DeleteExpense()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var expense = await context.Expenses.FindAsync(deletingExpense!.Id);
+            if (expense != null)
+            {
+                context.Expenses.Remove(expense);
+                await context.SaveChangesAsync();
+
+                await LoadExpenses();
+                await GenerateExpenseSummary();
+                ApplyFilters();
+
+                CloseDeleteConfirmModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            expenseError = $"Ошибка при удалении: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleSummary()
+    {
+        showSummary = !showSummary;
+        StateHasChanged();
+    }
+
+    private async Task GenerateExpenseSummary()
+    {
+        // Используем filteredExpenses если фильтры применены, иначе все expenses
+        var expensesToSummarize = filteredExpenses ?? expenses;
+
+        if (expensesToSummarize == null || !expensesToSummarize.Any())
+        {
+            expenseSummary = null;
+            return;
+        }
+
+        // Группируем расходы по названию и суммируем
+        var summaries = expensesToSummarize
+            .GroupBy(e => e.Name.Trim().ToLower())
+            .Select(g => new ExpenseSummary
+            {
+                Name = g.First().Name, // Берем оригинальное название
+                Count = g.Count(),
+                TotalAmount = g.Sum(e => e.Amount)
+            })
+            .OrderByDescending(s => s.TotalAmount)
+            .ThenBy(s => s.Name)
+            .ToList();
+
+        expenseSummary = summaries;
+    }
+
+    private int GetUniqueExpenseCount()
+    {
+        var expensesToCount = filteredExpenses ?? expenses;
+        if (expensesToCount == null) return 0;
+        return expensesToCount
+            .Select(e => e.Name.Trim().ToLower())
+            .Distinct()
+            .Count();
+    }
+}

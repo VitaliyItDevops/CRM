@@ -1,97 +1,71 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
-namespace bryx_CRM.Data.Models
+namespace bryx_CRM.Data.Models;
+
+public partial class Product
 {
-    public class Product
-    {
-        [Key]
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        [Required]
-        [MaxLength(100)]
-        public string Category { get; set; } = string.Empty;
+    public string Category { get; set; } = null!;
 
-        [MaxLength(100)]
-        public string? Subcategory { get; set; }
+    public string Name { get; set; } = null!;
 
-        [Required]
-        [MaxLength(200)]
-        public string Name { get; set; } = string.Empty;
+    public decimal PurchasePrice { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal PurchasePrice { get; set; }
+    public decimal SalePrice { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal SalePrice { get; set; }
+    public string Status { get; set; } = null!;
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal? PlannedPrice { get; set; }
+    public string Supplier { get; set; } = null!;
 
-        [Column(TypeName = "decimal(18,4)")]
-        public decimal? ExchangeRate { get; set; }
+    public bool IsDefective { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal? PriceInUSD { get; set; }
+    public DateTime CreatedAt { get; set; }
 
-        [Required]
-        [MaxLength(50)]
-        public string Status { get; set; } = "В наличии";
+    public DateTime? UpdatedAt { get; set; }
 
-        [Required]
-        [MaxLength(200)]
-        public string Supplier { get; set; } = string.Empty;
+    public bool IsFavorite { get; set; }
 
-        [MaxLength(100)]
-        public string? Color { get; set; }
+    public string? AdditionalService { get; set; }
 
-        public bool IsDefective { get; set; } = false;
+    public string? Buyer { get; set; }
 
-        public bool IsFavorite { get; set; } = false;
+    public string? SoldFor { get; set; }
 
-        // Поля для работы с покупками и продажами
-        [MaxLength(100)]
-        public string? TTN { get; set; }
+    public string? SoldThrough { get; set; }
 
-        [MaxLength(200)]
-        public string? Buyer { get; set; }
+    public string? Ttn { get; set; }
 
-        [MaxLength(200)]
-        public string? SoldFor { get; set; }
+    public decimal? PlannedPrice { get; set; }
 
-        [MaxLength(200)]
-        public string? SoldThrough { get; set; }
+    public DateTime? ArrivalDate { get; set; }
 
-        [MaxLength(300)]
-        public string? AdditionalService { get; set; }
+    public DateTime? SaleDate { get; set; }
 
-        public DateTime? ArrivalDate { get; set; }
+    public DateTime? DeliveryDate { get; set; }
 
-        public DateTime? SaleDate { get; set; }
+    public int? SaleId { get; set; }
 
-        public DateTime? DeliveryDate { get; set; }
+    public string? Color { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public byte[]? RowVersion { get; set; }
 
-        public DateTime? UpdatedAt { get; set; }
+    public decimal? ExchangeRate { get; set; }
 
-        // Оптимистическая блокировка для многопользовательского режима
-        [Timestamp]
-        public byte[]? RowVersion { get; set; }
+    public decimal? PriceInUsd { get; set; }
 
-        // Связь с покупкой
-        public int? PurchaseId { get; set; }
-        public Purchase? Purchase { get; set; }
+    public string? Subcategory { get; set; }
 
-        // Связь с продажей
-        public int? SaleId { get; set; }
-        public Sale? Sale { get; set; }
+    public int? PurchaseId { get; set; }
 
-        // Оригинальная продажа (для истории, никогда не обнуляется)
-        public int? OriginalSaleId { get; set; }
+    public int? OriginalSaleId { get; set; }
 
-        // Связь с услугой
-        public int? ServiceId { get; set; }
-        public Service? Service { get; set; }
-    }
+    public int? ServiceId { get; set; }
+
+    public virtual Purchase? Purchase { get; set; }
+
+    public virtual Sale? Sale { get; set; }
+
+    public virtual Service? Service { get; set; }
 }

@@ -1,53 +1,37 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
-namespace bryx_CRM.Data.Models
+namespace bryx_CRM.Data.Models;
+
+public partial class Purchase
 {
-    public class Purchase
-    {
-        [Key]
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        [Required]
-        public DateTime PurchaseDate { get; set; }
+    public DateTime PurchaseDate { get; set; }
 
-        [Required]
-        [MaxLength(100)]
-        public string Category { get; set; } = string.Empty;
+    public string Category { get; set; } = null!;
 
-        [MaxLength(100)]
-        public string? Subcategory { get; set; }
+    public string Supplier { get; set; } = null!;
 
-        [Required]
-        [MaxLength(200)]
-        public string Supplier { get; set; } = string.Empty;
+    public decimal TotalPriceUsd { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal TotalPriceUSD { get; set; }
+    public decimal ExchangeRate { get; set; }
 
-        [Column(TypeName = "decimal(18,4)")]
-        public decimal ExchangeRate { get; set; }
+    public decimal TotalPriceUah { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal TotalPriceUAH { get; set; }
+    public int Quantity { get; set; }
 
-        public int Quantity { get; set; }
+    public DateTime CreatedAt { get; set; }
 
-        [Required]
-        [MaxLength(50)]
-        public string Status { get; set; } = "Ожидается";
+    public DateTime? UpdatedAt { get; set; }
 
-        [MaxLength(500)]
-        public string? Comment { get; set; }
+    public byte[]? RowVersion { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? Comment { get; set; }
 
-        public DateTime? UpdatedAt { get; set; }
+    public string Status { get; set; } = null!;
 
-        [Timestamp]
-        public byte[]? RowVersion { get; set; }
+    public string? Subcategory { get; set; }
 
-        // Навигационное свойство для связи с товарами
-        public ICollection<Product> Products { get; set; } = new List<Product>();
-    }
+    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 }

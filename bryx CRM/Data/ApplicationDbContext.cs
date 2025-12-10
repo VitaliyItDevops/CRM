@@ -19,6 +19,8 @@ namespace bryx_CRM.Data
         public DbSet<Purchase> Purchases { get; set; }
         public DbSet<Service> Services { get; set; }
         public DbSet<ServiceCategory> ServiceCategories { get; set; }
+        public DbSet<Expense> Expenses { get; set; }
+        public DbSet<ExpenseCategory> ExpenseCategories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -116,6 +118,26 @@ namespace bryx_CRM.Data
             modelBuilder.Entity<ServiceCategory>(entity =>
             {
                 entity.ToTable("ServiceCategories");
+
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            // Настройки для таблицы Expenses
+            modelBuilder.Entity<Expense>(entity =>
+            {
+                entity.ToTable("Expenses");
+
+                entity.HasIndex(e => e.Category);
+                entity.HasIndex(e => e.ExpenseDate);
+
+                entity.Property(e => e.Amount)
+                    .HasPrecision(18, 2);
+            });
+
+            // Настройки для таблицы ExpenseCategories
+            modelBuilder.Entity<ExpenseCategory>(entity =>
+            {
+                entity.ToTable("ExpenseCategories");
 
                 entity.HasIndex(e => e.Name).IsUnique();
             });

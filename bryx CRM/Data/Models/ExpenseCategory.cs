@@ -3,11 +3,9 @@ using System.Collections.Generic;
 
 namespace bryx_CRM.Data.Models;
 
-public partial class Subcategory
+public partial class ExpenseCategory
 {
     public int Id { get; set; }
-
-    public string CategoryName { get; set; } = null!;
 
     public string Name { get; set; } = null!;
 

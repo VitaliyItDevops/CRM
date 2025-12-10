@@ -1306,12 +1306,40 @@
             soldCount = allProducts.Count(p => p.Status == "Продано");
             soldValue = allProducts.Where(p => p.Status == "Продано").Sum(p => p.SalePrice);
 
-            // Финансовые расчеты
-            var soldProducts = allProducts.Where(p => p.Status == "Продано").ToList();
-            totalRevenue = soldProducts.Sum(p => p.SalePrice);
-            totalProfit = soldProducts.Sum(p => p.SalePrice - p.PurchasePrice);
+            // Финансовые расчеты - ПРАВИЛЬНЫЙ МЕТОД
+            // 1. Выручка = сумма всех завершенных продаж из таблицы Sales
+            //    (включает стоимость товаров + услуги)
+            var completedSales = await context.Sales
+                .Where(s => s.Status == "Получено")
+                .ToListAsync();
 
-            if (soldProducts.Any() && totalRevenue > 0)
+            // ОТЛАДКА: Выводим информацию о продажах
+            Console.WriteLine($"🔍 DEBUG: Найдено завершенных продаж: {completedSales.Count}");
+            foreach (var sale in completedSales)
+            {
+                Console.WriteLine($"   - Sale ID: {sale.Id}, Buyer: {sale.Buyer}, Amount: {sale.TotalAmount:N2}, Date: {sale.SaleDate}");
+            }
+
+            totalRevenue = completedSales.Sum(s => s.TotalAmount);
+            Console.WriteLine($"💰 DEBUG: Общая выручка: {totalRevenue:N2}");
+
+            // 2. Затраты на товары = цена закупки товаров, которые в продажах
+            var soldProductsInSales = allProducts.Where(p => p.SaleId != null).ToList();
+            var productCosts = soldProductsInSales.Sum(p => p.PurchasePrice);
+            Console.WriteLine($"📦 DEBUG: Товаров в продажах: {soldProductsInSales.Count}, Затраты на товары: {productCosts:N2}");
+
+            // 3. Расходы = все расходы из таблицы Expenses
+            var allExpenses = await context.Expenses.ToListAsync();
+            var totalExpenses = allExpenses.Sum(e => e.Amount);
+            Console.WriteLine($"💸 DEBUG: Всего расходов: {allExpenses.Count}, Сумма расходов: {totalExpenses:N2}");
+
+            // 4. Прибыль = Выручка - Затраты на товары - Расходы
+            //    (услуги в выручке уже учтены, у них нет себестоимости)
+            totalProfit = totalRevenue - productCosts - totalExpenses;
+            Console.WriteLine($"💵 DEBUG: Прибыль = {totalRevenue:N2} - {productCosts:N2} - {totalExpenses:N2} = {totalProfit:N2}");
+
+            // 5. Маржа = (Прибыль / Выручка) * 100
+            if (totalRevenue > 0)
             {
                 averageMargin = (totalProfit / totalRevenue) * 100;
             }

@@ -1,24 +1,19 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
 
-namespace bryx_CRM.Data.Models
+namespace bryx_CRM.Data.Models;
+
+public partial class ServiceCategory
 {
-    public class ServiceCategory
-    {
-        [Key]
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        [Required]
-        [MaxLength(100)]
-        public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = null!;
 
-        [MaxLength(500)]
-        public string? Description { get; set; }
+    public string? Description { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
 
-        public DateTime? UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-        [Timestamp]
-        public byte[]? RowVersion { get; set; }
-    }
+    public byte[]? RowVersion { get; set; }
 }

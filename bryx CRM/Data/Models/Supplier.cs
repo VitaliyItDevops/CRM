@@ -1,16 +1,13 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
 
-namespace bryx_CRM.Data.Models
+namespace bryx_CRM.Data.Models;
+
+public partial class Supplier
 {
-    public class Supplier
-    {
-        [Key]
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        [Required]
-        [MaxLength(200)]
-        public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = null!;
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    }
+    public DateTime CreatedAt { get; set; }
 }
