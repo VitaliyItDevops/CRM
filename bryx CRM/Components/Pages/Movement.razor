@@ -720,6 +720,9 @@ else
             sale.Products = products.Where(p => p.SaleId == sale.Id).ToList();
         }
 
+        // Автоматически исправляем статусы "зависших" продаж с частичным возвратом
+        await FixStuckPartialReturns(context, sales);
+
         // Убираем продажи без товаров (все уже обработаны)
         sales = sales.Where(s => s.Products.Any()).ToList();
     }
@@ -1072,5 +1075,50 @@ else
         {
             Console.WriteLine($"Ошибка при обновлении статуса: {ex.Message}");
         }
+    }
+
+    private async Task FixStuckPartialReturns(ApplicationDbContext context, List<Sale> sales)
+    {
+        // Исправляем статусы продаж с частичным возвратом, где все возвраты уже получены
+        var salesToFix = sales.Where(s => s.Status == "Частичный возврат" || s.Status == "Возврат").ToList();
+
+        foreach (var sale in salesToFix)
+        {
+            // Проверяем, есть ли товары со статусом "Возврат"
+            var hasReturnsInProgress = await context.Products
+                .Where(p => (p.OriginalSaleId == sale.Id || p.SaleId == sale.Id) && p.Status == "Возврат")
+                .AnyAsync();
+
+            if (!hasReturnsInProgress)
+            {
+                // Все возвраты получены, проверяем оставшиеся товары
+                var remainingProducts = await context.Products
+                    .Where(p => (p.OriginalSaleId == sale.Id || p.SaleId == sale.Id) && p.SaleId != null)
+                    .ToListAsync();
+
+                bool shouldMarkAsReceived = false;
+
+                if (remainingProducts.Count == 0)
+                {
+                    // Все товары возвращены - полный возврат завершен
+                    shouldMarkAsReceived = true;
+                }
+                else if (remainingProducts.All(p => p.Status == "Продано"))
+                {
+                    // Частичный возврат завершен - все оставшиеся товары проданы
+                    shouldMarkAsReceived = true;
+                }
+
+                if (shouldMarkAsReceived)
+                {
+                    sale.Status = "Получено";
+                    sale.UpdatedAt = DateTime.UtcNow;
+                    context.Entry(sale).State = EntityState.Modified;
+                }
+            }
+        }
+
+        // Сохраняем изменения
+        await context.SaveChangesAsync();
     }
 }
