@@ -48,12 +48,23 @@ else
 
 // Регистрация PooledDbContextFactory для Blazor компонентов
 builder.Services.AddPooledDbContextFactory<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+{
+    options.UseNpgsql(connectionString);
+    // Подавляем предупреждение о pending model changes, так как изменения в названиях свойств
+    // не влияют на схему БД (правильно маппятся через HasColumnName в BryxCrmContext)
+    options.ConfigureWarnings(warnings =>
+        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+});
 
 // Регистрация DbContext для Identity
 // Используем AddDbContextPool для совместимости с PooledDbContextFactory
 builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+{
+    options.UseNpgsql(connectionString);
+    // Подавляем предупреждение о pending model changes
+    options.ConfigureWarnings(warnings =>
+        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+});
 
 // Настройка ASP.NET Core Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
