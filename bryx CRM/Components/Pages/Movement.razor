@@ -892,11 +892,31 @@ else
             {
                 // Полный возврат
                 sale.Status = "Возврат";
+                sale.TotalAmount = 0; // При полном возврате сумма = 0
             }
             else
             {
-                // Частичный возврат
+                // Частичный возврат - пересчитываем сумму только по не возвращенным товарам
                 sale.Status = "Частичный возврат";
+                decimal newTotalAmount = 0;
+
+                foreach (var product in productsNotReturned)
+                {
+                    // Суммируем цену продажи товара
+                    newTotalAmount += product.SalePrice;
+
+                    // Если у товара есть услуга, добавляем её стоимость
+                    if (product.ServiceId.HasValue)
+                    {
+                        var service = await context.Services.FindAsync(product.ServiceId.Value);
+                        if (service != null)
+                        {
+                            newTotalAmount += service.Price;
+                        }
+                    }
+                }
+
+                sale.TotalAmount = newTotalAmount;
             }
 
             sale.UpdatedAt = DateTime.UtcNow;
@@ -1005,16 +1025,31 @@ else
                     var sale = await context.Sales.FindAsync(originalSaleId.Value);
                     if (sale != null)
                     {
-                        // Проверяем, остались ли вообще товары связанные с продажей (кроме возвращенных)
+                        // Проверяем, остались ли товары связанные с продажей (не возвращенные)
                         var remainingProducts = await context.Products
                             .Where(p => p.OriginalSaleId == originalSaleId.Value && p.SaleId != null)
-                            .CountAsync();
+                            .ToListAsync();
 
-                        if (remainingProducts == 0)
+                        if (remainingProducts.Count == 0)
                         {
-                            // Все товары возвращены и получены - продажа завершена
+                            // Все товары возвращены и получены - полный возврат завершен
                             sale.Status = "Получено";
                         }
+                        else
+                        {
+                            // Остались не возвращенные товары
+                            // Проверяем, все ли они уже в статусе "Продано"
+                            var allSold = remainingProducts.All(p => p.Status == "Продано");
+
+                            if (allSold)
+                            {
+                                // Частичный возврат завершен - все оставшиеся товары проданы
+                                sale.Status = "Получено";
+                            }
+                            // Если не все проданы (есть "Отправлено" или "Ожидает"),
+                            // оставляем статус "Частичный возврат"
+                        }
+
                         sale.UpdatedAt = DateTime.UtcNow;
                         context.Entry(sale).State = EntityState.Modified;
                     }
