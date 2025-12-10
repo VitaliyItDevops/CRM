@@ -1968,7 +1968,7 @@ else
                 SoldThrough = string.IsNullOrWhiteSpace(soldThrough) ? null : soldThrough.Trim(),
                 AdditionalService = string.IsNullOrWhiteSpace(additionalService) ? null : additionalService.Trim(),
                 TotalAmount = cartItems.Sum(i => (i.SalePrice * i.Quantity) + (i.ServicePrice ?? 0)),
-                // Status будет установлен из значения по умолчанию модели = "Ожидает"
+                Status = "Ожидает",
                 CreatedAt = DateTime.UtcNow
             };
 
