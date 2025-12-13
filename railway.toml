@@ -5,7 +5,8 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "dotnet run --project \"bryx CRM/bryx CRM.csproj\""
+# Nixpacks автоматически определит правильную команду запуска для .NET
+# Не нужно указывать startCommand вручную
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
