@@ -1,11 +1,14 @@
+# Nixpacks configuration for Railway
+# Adds PostgreSQL client tools for backup functionality
+
 [phases.setup]
-nixPkgs = ["...", "dotnet-sdk"]
+aptPkgs = ["postgresql-client"]
+
+[phases.install]
+cmds = ["dotnet restore \"bryx CRM/bryx CRM.csproj\""]
 
 [phases.build]
-cmds = [
-    "cd 'bryx CRM' && dotnet restore 'bryx CRM.csproj'",
-    "cd 'bryx CRM' && dotnet publish 'bryx CRM.csproj' -c Release -o /app/publish --no-self-contained"
-]
+cmds = ["dotnet publish \"bryx CRM/bryx CRM.csproj\" -c Release -o /app/publish"]
 
 [start]
-cmd = "cd /app/publish && dotnet bryx_CRM.dll"
+cmd = "dotnet /app/publish/bryx_CRM.dll"

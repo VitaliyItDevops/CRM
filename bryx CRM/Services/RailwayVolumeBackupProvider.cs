@@ -98,39 +98,32 @@ public class RailwayVolumeBackupProvider : IBackupProvider
 
             _logger.LogInformation("🔄 [Railway] Начинаем создание бекапа в Volume: {Database}", database);
 
-            // Используем pg_dump через Docker
-            // В Railway можно использовать официальный PostgreSQL образ
-            var dockerImage = $"postgres:{GetPostgresVersion()}";
-
+            // Используем pg_dump напрямую (установлен через nixpacks.toml)
             var processStartInfo = new ProcessStartInfo
             {
-                FileName = "docker",
-                Arguments = $"run --rm -e PGPASSWORD={password} {dockerImage} " +
-                           $"pg_dump -h {host} -p {port} -U {username} -d {database} -F c",
+                FileName = "pg_dump",
+                Arguments = $"-h {host} -p {port} -U {username} -d {database} -F c -f \"{backupFilePath}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
 
+            // Устанавливаем пароль через переменную окружения
+            processStartInfo.Environment["PGPASSWORD"] = password;
+
             using var process = new Process { StartInfo = processStartInfo };
             process.Start();
 
-            // Сохраняем вывод в файл
-            using (var fileStream = File.Create(backupFilePath))
-            {
-                await process.StandardOutput.BaseStream.CopyToAsync(fileStream, cancellationToken);
-            }
-
+            var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
             var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+
             await process.WaitForExitAsync(cancellationToken);
 
             if (process.ExitCode != 0)
             {
                 _logger.LogError("❌ [Railway] Ошибка при создании бекапа: {Error}", error);
-
-                // Пытаемся использовать локальный pg_dump если Docker не доступен
-                return await CreateBackupUsingLocalPgDump(connectionString, cancellationToken);
+                throw new Exception($"pg_dump завершился с ошибкой: {error}");
             }
 
             // Проверяем размер файла
@@ -149,48 +142,6 @@ public class RailwayVolumeBackupProvider : IBackupProvider
         }
     }
 
-    private async Task<string> CreateBackupUsingLocalPgDump(string connectionString, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("🔄 [Railway] Пробуем использовать локальный pg_dump");
-
-        var (host, port, database, username, password) = ParseConnectionString(connectionString);
-
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var backupFileName = $"railway_backup_{database}_{timestamp}.sql";
-        var backupFilePath = Path.Combine(_volumePath, backupFileName);
-
-        var processStartInfo = new ProcessStartInfo
-        {
-            FileName = "pg_dump",
-            Arguments = $"-h {host} -p {port} -U {username} -d {database} -F c -f \"{backupFilePath}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        processStartInfo.Environment["PGPASSWORD"] = password;
-
-        using var process = new Process { StartInfo = processStartInfo };
-        process.Start();
-
-        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-
-        await process.WaitForExitAsync(cancellationToken);
-
-        if (process.ExitCode != 0)
-        {
-            throw new Exception($"Не удалось создать бекап ни через Docker, ни через локальный pg_dump: {error}");
-        }
-
-        var fileInfo = new FileInfo(backupFilePath);
-        var fileSizeMb = fileInfo.Length / 1024.0 / 1024.0;
-
-        _logger.LogInformation("✅ [Railway] Бекап создан через локальный pg_dump: {FileName} ({Size:F2} МБ)", backupFileName, fileSizeMb);
-
-        return backupFilePath;
-    }
 
     public async Task<bool> RestoreBackupAsync(string backupFilePath, CancellationToken cancellationToken = default)
     {
@@ -208,43 +159,35 @@ public class RailwayVolumeBackupProvider : IBackupProvider
 
             _logger.LogInformation("🔄 [Railway] Начинаем восстановление из бекапа в Volume: {BackupFile}", Path.GetFileName(backupFilePath));
 
-            // Пытаемся использовать Docker
-            try
+            // Используем pg_restore напрямую (установлен через nixpacks.toml)
+            var processStartInfo = new ProcessStartInfo
             {
-                var dockerImage = $"postgres:{GetPostgresVersion()}";
+                FileName = "pg_restore",
+                Arguments = $"-h {host} -p {port} -U {username} -d {database} -c \"{backupFilePath}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
 
-                var processStartInfo = new ProcessStartInfo
-                {
-                    FileName = "docker",
-                    Arguments = $"run --rm -i -e PGPASSWORD={password} -v \"{backupFilePath}:/backup.sql\" {dockerImage} " +
-                               $"pg_restore -h {host} -p {port} -U {username} -d {database} -c /backup.sql",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
+            processStartInfo.Environment["PGPASSWORD"] = password;
 
-                using var process = new Process { StartInfo = processStartInfo };
-                process.Start();
+            using var process = new Process { StartInfo = processStartInfo };
+            process.Start();
 
-                var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-                var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+            var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var error = await process.StandardError.ReadToEndAsync(cancellationToken);
 
-                await process.WaitForExitAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
 
-                if (process.ExitCode == 0)
-                {
-                    _logger.LogInformation("✅ [Railway] База данных успешно восстановлена из бекапа");
-                    return true;
-                }
-            }
-            catch
+            if (process.ExitCode != 0)
             {
-                _logger.LogWarning("⚠️ [Railway] Docker недоступен, используем локальный pg_restore");
+                _logger.LogError("❌ [Railway] Ошибка при восстановлении бекапа: {Error}", error);
+                throw new Exception($"pg_restore завершился с ошибкой: {error}");
             }
 
-            // Fallback на локальный pg_restore
-            return await RestoreBackupUsingLocalPgRestore(backupFilePath, connectionString, cancellationToken);
+            _logger.LogInformation("✅ [Railway] База данных успешно восстановлена из бекапа");
+            return true;
         }
         catch (Exception ex)
         {
@@ -253,38 +196,6 @@ public class RailwayVolumeBackupProvider : IBackupProvider
         }
     }
 
-    private async Task<bool> RestoreBackupUsingLocalPgRestore(string backupFilePath, string connectionString, CancellationToken cancellationToken)
-    {
-        var (host, port, database, username, password) = ParseConnectionString(connectionString);
-
-        var processStartInfo = new ProcessStartInfo
-        {
-            FileName = "pg_restore",
-            Arguments = $"-h {host} -p {port} -U {username} -d {database} -c \"{backupFilePath}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        processStartInfo.Environment["PGPASSWORD"] = password;
-
-        using var process = new Process { StartInfo = processStartInfo };
-        process.Start();
-
-        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-
-        await process.WaitForExitAsync(cancellationToken);
-
-        if (process.ExitCode != 0)
-        {
-            throw new Exception($"pg_restore завершился с ошибкой: {error}");
-        }
-
-        _logger.LogInformation("✅ [Railway] База данных успешно восстановлена через локальный pg_restore");
-        return true;
-    }
 
     public Task<List<BackupInfo>> GetBackupListAsync()
     {
@@ -337,12 +248,6 @@ public class RailwayVolumeBackupProvider : IBackupProvider
             _logger.LogError(ex, "❌ [Railway] Ошибка при удалении бекапа из Volume: {FilePath}", backupFilePath);
             return Task.FromResult(false);
         }
-    }
-
-    private string GetPostgresVersion()
-    {
-        // Можно определить версию PostgreSQL из переменной окружения или использовать дефолтную
-        return Environment.GetEnvironmentVariable("POSTGRES_VERSION") ?? "17";
     }
 
     private (string host, string port, string database, string username, string password) ParseConnectionString(string connectionString)
