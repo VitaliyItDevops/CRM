@@ -4,6 +4,7 @@ using bryx_CRM.Data.Models;
 using bryx_CRM.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,16 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5092";
 Console.WriteLine($"🚀 Starting application on port: {port}");
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+// Настройка Forwarded Headers для работы за HTTPS прокси (Railway, Nginx, и т.д.)
+// Railway терминирует SSL и отправляет заголовки X-Forwarded-Proto: https
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Доверяем всем прокси (безопасно для Railway, так как это закрытая сеть)
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -189,6 +200,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+
+// ВАЖНО: UseForwardedHeaders должен быть первым!
+// Это позволяет приложению понимать, что оно за HTTPS прокси
+app.UseForwardedHeaders();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -197,7 +213,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStatusCodePagesWithReExecute("/not-found");
 
-// HTTPS редирект убран - Railway обрабатывает HTTPS на уровне прокси
+// HTTPS редирект не нужен - Railway уже редиректит на HTTPS на уровне прокси
+// UseForwardedHeaders гарантирует, что приложение генерирует HTTPS ссылки
 // app.UseHttpsRedirection();
 
 // Middleware для аутентификации и авторизации
