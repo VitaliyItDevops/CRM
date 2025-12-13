@@ -1,6 +1,7 @@
 using bryx_CRM.Components;
 using bryx_CRM.Data;
 using bryx_CRM.Data.Models;
+using bryx_CRM.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -96,6 +97,21 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromDays(30);
     options.SlidingExpiration = true;
 });
+
+// Регистрация сервисов для бекапов
+builder.Services.Configure<BackupOptions>(builder.Configuration.GetSection("BackupOptions"));
+
+// Регистрация провайдеров бэкапов (порядок важен - проверяется по очереди)
+// 1. Railway Volume Provider - приоритет на Railway
+builder.Services.AddScoped<IBackupProvider, RailwayVolumeBackupProvider>();
+// 2. Local Provider - fallback для локальной разработки
+builder.Services.AddScoped<IBackupProvider, LocalBackupProvider>();
+
+// Основной сервис бэкапов
+builder.Services.AddScoped<BackupService>();
+
+// Автоматические бэкапы
+builder.Services.AddHostedService<AutoBackupHostedService>();
 
 var app = builder.Build();
 

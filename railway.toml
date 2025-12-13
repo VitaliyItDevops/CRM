@@ -1,0 +1,33 @@
+# Railway Configuration для bryx CRM
+# Документация: https://docs.railway.com/reference/config-as-code
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "dotnet run --project \"bryx CRM/bryx CRM.csproj\""
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+# ВАЖНО: Настройка Volume для бэкапов базы данных
+# После создания Volume в Railway Dashboard, настройте mount path:
+#
+# 1. Создайте Volume в Railway:
+#    - Откройте ваш проект в Railway Dashboard
+#    - Перейдите в раздел "Volumes"
+#    - Нажмите "New Volume"
+#    - Укажите имя: "bryx-crm-backups"
+#    - Укажите размер (рекомендуется минимум 1GB)
+#
+# 2. Примонтируйте Volume к сервису:
+#    - Откройте настройки вашего сервиса
+#    - В разделе "Volumes" выберите созданный volume
+#    - Укажите Mount Path: /app/backups
+#    - Railway автоматически создаст переменную RAILWAY_VOLUME_MOUNT_PATH
+#
+# 3. Настройте переменную окружения (опционально):
+#    Добавьте в Variables:
+#    RAILWAY_VOLUME_MOUNT_PATH=/app/backups
+#
+# После этого система автоматически будет использовать Railway Volume Provider
+# и все бэкапы будут сохраняться в Volume с автоматическим резервным копированием
