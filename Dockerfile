@@ -17,9 +17,14 @@ RUN dotnet publish "bryx CRM.csproj" -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
-# Install PostgreSQL client tools (pg_dump, pg_restore)
+# Install PostgreSQL 17 client tools (pg_dump, pg_restore)
+# Match server version 17.7 to avoid version mismatch
 RUN apt-get update && \
-    apt-get install -y postgresql-client && \
+    apt-get install -y wget gnupg && \
+    echo "deb http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
+    apt-get update && \
+    apt-get install -y postgresql-client-17 && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy published app
