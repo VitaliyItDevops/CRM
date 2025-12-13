@@ -1,32 +1,33 @@
-# Build stage
+# Railway Dockerfile for bryx CRM with PostgreSQL client tools
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Copy csproj and restore dependencies
+# Copy project files
 COPY ["bryx CRM/bryx CRM.csproj", "bryx CRM/"]
 RUN dotnet restore "bryx CRM/bryx CRM.csproj"
 
-# Copy everything else and build
+# Copy source code
 COPY . .
-WORKDIR "/src/bryx CRM"
-RUN dotnet build "bryx CRM.csproj" -c Release -o /app/build
 
-# Publish stage
-FROM build AS publish
-RUN dotnet publish "bryx CRM.csproj" -c Release -o /app/publish --no-restore
+# Build and publish
+WORKDIR "/src/bryx CRM"
+RUN dotnet publish "bryx CRM.csproj" -c Release -o /app/publish
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
-# Copy published files
-COPY --from=publish /app/publish .
+# Install PostgreSQL client tools (pg_dump, pg_restore)
+RUN apt-get update && \
+    apt-get install -y postgresql-client && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set environment variables
-ENV ASPNETCORE_ENVIRONMENT=Production
+# Copy published app
+COPY --from=build /app/publish .
 
-# Expose port (Railway will set PORT env var)
-EXPOSE 5092
+# Expose port (Railway uses PORT env variable)
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
 
-# Run the application
+# Start application
 ENTRYPOINT ["dotnet", "bryx_CRM.dll"]

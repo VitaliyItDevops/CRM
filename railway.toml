@@ -2,11 +2,10 @@
 # Документация: https://docs.railway.com/reference/config-as-code
 
 [build]
-builder = "nixpacks"
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-# Nixpacks автоматически определит правильную команду запуска для .NET
-# Не нужно указывать startCommand вручную
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
