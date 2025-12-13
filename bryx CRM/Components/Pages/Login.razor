@@ -1,9 +1,13 @@
 @page "/login"
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using bryx_CRM.Data.Models
+@using bryx_CRM.Data
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 
 <PageTitle>Вход в систему</PageTitle>
 
@@ -291,6 +295,26 @@
 
             if (result.Succeeded)
             {
+                // Обновляем время последнего входа
+                try
+                {
+                    var user = await UserManager.FindByEmailAsync(loginModel.Email);
+                    if (user != null)
+                    {
+                        await using var context = await DbContextFactory.CreateDbContextAsync();
+                        var dbUser = await context.Users.FindAsync(user.Id);
+                        if (dbUser != null)
+                        {
+                            dbUser.LastLoginAt = DateTime.UtcNow;
+                            await context.SaveChangesAsync();
+                        }
+                    }
+                }
+                catch
+                {
+                    // Игнорируем ошибку обновления LastLoginAt - это не критично
+                }
+
                 // Редирект без forceLoad для избежания NavigationException в .NET 9
                 NavigationManager.NavigateTo("/");
                 return;

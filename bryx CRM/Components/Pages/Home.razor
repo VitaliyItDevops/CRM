@@ -239,6 +239,16 @@
             <div class="col-lg-3">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
+                        <h5 class="card-title mb-3">💸 Расходы</h5>
+                        <h3 class="mb-0 text-danger fw-bold">@totalExpenses.ToString("N2") ₽</h3>
+                        <p class="text-muted small mt-2 mb-0">Общие расходы</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
                         <h5 class="card-title mb-3">📈 Прибыль</h5>
                         <h3 class="mb-0 text-primary fw-bold">@totalProfit.ToString("N2") ₽</h3>
                         <p class="text-muted small mt-2 mb-0">Чистая прибыль</p>
@@ -915,6 +925,7 @@
 
     // Финансовые метрики
     private decimal totalRevenue = 0;
+    private decimal totalExpenses = 0;
     private decimal totalProfit = 0;
     private decimal averageMargin = 0;
     private decimal totalBalance = 0;
@@ -1330,7 +1341,7 @@
 
             // 3. Расходы = все расходы из таблицы Expenses
             var allExpenses = await context.Expenses.ToListAsync();
-            var totalExpenses = allExpenses.Sum(e => e.Amount);
+            totalExpenses = allExpenses.Sum(e => e.Amount);
             Console.WriteLine($"💸 DEBUG: Всего расходов: {allExpenses.Count}, Сумма расходов: {totalExpenses:N2}");
 
             // 4. Прибыль = Выручка - Затраты на товары - Расходы
