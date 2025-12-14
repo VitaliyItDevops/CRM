@@ -8,10 +8,51 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 @inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Вход в систему</PageTitle>
 
 <div class="login-container">
+    <!-- Animated particles -->
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+
+    <!-- Interactive character that reacts to user input -->
+    <div class="interactive-character">
+        <!-- Main face -->
+        <div class="character-face">😑</div>
+
+        <!-- Magnifying glass appears when typing email -->
+        <div class="character-accessory magnifying-glass" style="display: none;">🔍</div>
+
+        <!-- Two hands covering eyes when typing password -->
+        <div class="character-accessory hand-left" style="display: none;">✋</div>
+        <div class="character-accessory hand-right" style="display: none;">✋</div>
+
+        <!-- Pistol when password is incorrect -->
+        <div class="character-accessory pistol" style="display: none;">🔫</div>
+
+        <!-- Handshake when login successful -->
+        <div class="character-accessory handshake" style="display: none;">🤝</div>
+    </div>
+
+    <!-- Themed animations -->
+    <div class="theme-icon truck-1">🚚</div>
+    <div class="theme-icon truck-2">🚛</div>
+    <div class="theme-icon box-1">📦</div>
+    <div class="theme-icon box-2">📦</div>
+    <div class="theme-icon box-3">📦</div>
+    <div class="theme-icon money-1">💰</div>
+    <div class="theme-icon money-2">💵</div>
+    <div class="theme-icon package-1">📮</div>
+    <div class="theme-icon cart-1">🛒</div>
+    <div class="theme-icon delivery-1">🚚💨</div>
+    <div class="theme-icon coin-1">🪙</div>
+    <div class="theme-icon warehouse-1">🏭</div>
+
     <div class="login-card">
         <div class="login-header">
             <h2>🔐 Вход в bryx CRM</h2>
@@ -50,11 +91,13 @@
             <button type="submit" class="btn-login" disabled="@isLoading">
                 @if (isLoading)
                 {
-                    <span>⏳ Входим...</span>
+                    <span class="loading-spinner"></span>
+                    <span>Входим...</span>
                 }
                 else
                 {
                     <span>Войти</span>
+                    <span class="btn-arrow">→</span>
                 }
             </button>
         </EditForm>
@@ -62,51 +105,550 @@
 </div>
 
 <style>
+    body {
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
+
     .login-container {
         min-height: 100vh;
+        width: 100vw;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #000000 0%, #1c1c1e 50%, #000000 100%);
+        background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0f0f23 100%);
         padding: 20px;
-        position: relative;
+        position: fixed;
+        top: 0;
+        left: 0;
         overflow: hidden;
+        margin: 0;
     }
 
+    /* Animated gradient orbs */
     .login-container::before {
         content: '';
         position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(10, 132, 255, 0.1) 0%, transparent 50%);
-        animation: pulse 15s ease-in-out infinite;
+        top: -20%;
+        left: -20%;
+        width: 60%;
+        height: 60%;
+        background: radial-gradient(circle, rgba(10, 132, 255, 0.2) 0%, transparent 70%);
+        animation: float 20s ease-in-out infinite;
+        border-radius: 50%;
+        filter: blur(60px);
     }
 
-    @@keyframes pulse {
-        0%, 100% { transform: scale(1); opacity: 0.5; }
-        50% { transform: scale(1.5); opacity: 0.8; }
+    .login-container::after {
+        content: '';
+        position: absolute;
+        bottom: -20%;
+        right: -20%;
+        width: 60%;
+        height: 60%;
+        background: radial-gradient(circle, rgba(52, 199, 89, 0.15) 0%, transparent 70%);
+        animation: float 25s ease-in-out infinite reverse;
+        border-radius: 50%;
+        filter: blur(60px);
+    }
+
+    /* Floating particles */
+    .particle {
+        position: absolute;
+        background: rgba(10, 132, 255, 0.3);
+        border-radius: 50%;
+        pointer-events: none;
+        animation: particleFloat 15s infinite ease-in-out;
+    }
+
+    .particle:nth-child(1) {
+        width: 4px;
+        height: 4px;
+        top: 20%;
+        left: 20%;
+        animation-delay: 0s;
+    }
+
+    .particle:nth-child(2) {
+        width: 6px;
+        height: 6px;
+        top: 60%;
+        left: 80%;
+        animation-delay: 2s;
+    }
+
+    .particle:nth-child(3) {
+        width: 3px;
+        height: 3px;
+        top: 80%;
+        left: 30%;
+        animation-delay: 4s;
+    }
+
+    .particle:nth-child(4) {
+        width: 5px;
+        height: 5px;
+        top: 40%;
+        left: 70%;
+        animation-delay: 1s;
+    }
+
+    .particle:nth-child(5) {
+        width: 4px;
+        height: 4px;
+        top: 10%;
+        left: 50%;
+        animation-delay: 3s;
+    }
+
+    @@keyframes float {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(30px, -30px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+    }
+
+    @@keyframes particleFloat {
+        0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
+        25% { transform: translateY(-100px) translateX(50px); opacity: 0.8; }
+        50% { transform: translateY(-200px) translateX(-30px); opacity: 0.5; }
+        75% { transform: translateY(-100px) translateX(30px); opacity: 0.8; }
+    }
+
+    /* Interactive character */
+    .interactive-character {
+        position: absolute;
+        top: 50%;
+        left: 15%;
+        transform: translate(-50%, -50%);
+        z-index: 0;
+        pointer-events: none;
+        transition: left 0.6s ease, transform 0.6s ease;
+    }
+
+    .interactive-character.character-closer {
+        left: 22%;
+    }
+
+    .character-face {
+        font-size: 280px;
+        opacity: 1;
+        animation: faceBreathing 4s ease-in-out infinite;
+        position: relative;
+        z-index: 1;
+    }
+
+    @@keyframes faceBreathing {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.03);
+        }
+    }
+
+    .character-accessory {
+        position: absolute;
+        font-size: 80px;
+        opacity: 1;
+        z-index: 2;
+        animation: accessoryAppear 0.3s ease;
+    }
+
+    @@keyframes accessoryAppear {
+        0% {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .magnifying-glass {
+        top: 30%;
+        right: 5%;
+        font-size: 140px;
+        animation: magnifyingGlassMove 2s ease-in-out infinite;
+    }
+
+    @@keyframes magnifyingGlassMove {
+        0%, 100% {
+            transform: rotate(-10deg) translateY(0);
+        }
+        50% {
+            transform: rotate(10deg) translateY(-10px);
+        }
+    }
+
+    .hand-left {
+        top: 30%;
+        left: 25%;
+        font-size: 100px;
+        transform: rotate(-15deg);
+        animation: handCoverEyes 0.5s ease;
+    }
+
+    .hand-right {
+        top: 30%;
+        right: 25%;
+        font-size: 100px;
+        transform: scaleX(-1) rotate(-15deg);
+        animation: handCoverEyes 0.5s ease;
+    }
+
+    @@keyframes handCoverEyes {
+        0% {
+            opacity: 0;
+            transform: translateY(-50px) scale(0.5);
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+
+    .pistol {
+        bottom: 20%;
+        right: -25%;
+        font-size: 90px;
+        animation: pistolShake 0.15s ease-in-out infinite;
+    }
+
+    @@keyframes pistolShake {
+        0%, 100% {
+            transform: scaleX(-1) rotate(0deg) translateX(0);
+        }
+        25% {
+            transform: scaleX(-1) rotate(-8deg) translateX(-3px);
+        }
+        50% {
+            transform: scaleX(-1) rotate(8deg) translateX(3px);
+        }
+        75% {
+            transform: scaleX(-1) rotate(-5deg) translateX(-2px);
+        }
+    }
+
+    .handshake {
+        bottom: 30%;
+        right: -20%;
+        font-size: 100px;
+        animation: handshakeWave 1s ease infinite;
+    }
+
+    @@keyframes handshakeWave {
+        0%, 100% {
+            transform: translateY(0) rotate(0deg);
+        }
+        25% {
+            transform: translateY(-10px) rotate(-5deg);
+        }
+        75% {
+            transform: translateY(-10px) rotate(5deg);
+        }
+    }
+
+    /* Theme icon animations */
+    .theme-icon {
+        position: absolute;
+        font-size: 32px;
+        pointer-events: none;
+        opacity: 0.15;
+        z-index: 1;
+    }
+
+    /* Trucks driving across */
+    .truck-1 {
+        top: 15%;
+        left: -60px;
+        animation: driveAcross 25s linear infinite;
+        transform: scaleX(-1);
+    }
+
+    .truck-2 {
+        top: 75%;
+        left: -60px;
+        animation: driveAcross 30s linear infinite;
+        animation-delay: 8s;
+        font-size: 40px;
+        transform: scaleX(-1);
+    }
+
+    @@keyframes driveAcross {
+        0% {
+            left: -60px;
+            opacity: 0;
+        }
+        10% {
+            opacity: 0.15;
+        }
+        90% {
+            opacity: 0.15;
+        }
+        100% {
+            left: calc(100% + 60px);
+            opacity: 0;
+        }
+    }
+
+    /* Boxes floating */
+    .box-1 {
+        top: 30%;
+        right: 10%;
+        animation: floatBox 20s ease-in-out infinite;
+    }
+
+    .box-2 {
+        top: 60%;
+        left: 15%;
+        animation: floatBox 25s ease-in-out infinite;
+        animation-delay: 5s;
+    }
+
+    .box-3 {
+        top: 85%;
+        right: 25%;
+        animation: floatBox 22s ease-in-out infinite;
+        animation-delay: 10s;
+    }
+
+    @@keyframes floatBox {
+        0%, 100% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 0.1;
+        }
+        25% {
+            transform: translateY(-30px) rotate(5deg);
+            opacity: 0.15;
+        }
+        50% {
+            transform: translateY(-60px) rotate(-5deg);
+            opacity: 0.2;
+        }
+        75% {
+            transform: translateY(-30px) rotate(3deg);
+            opacity: 0.15;
+        }
+    }
+
+    /* Money falling */
+    .money-1 {
+        top: -50px;
+        left: 20%;
+        animation: moneyFall 15s linear infinite;
+    }
+
+    .money-2 {
+        top: -50px;
+        right: 30%;
+        animation: moneyFall 18s linear infinite;
+        animation-delay: 7s;
+    }
+
+    .coin-1 {
+        top: -50px;
+        left: 60%;
+        animation: moneyFall 20s linear infinite;
+        animation-delay: 12s;
+        font-size: 28px;
+    }
+
+    @@keyframes moneyFall {
+        0% {
+            top: -50px;
+            opacity: 0;
+            transform: rotate(0deg);
+        }
+        10% {
+            opacity: 0.15;
+        }
+        90% {
+            opacity: 0.15;
+        }
+        100% {
+            top: calc(100% + 50px);
+            opacity: 0;
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Package delivery */
+    .package-1 {
+        bottom: 20%;
+        left: -60px;
+        animation: deliverySlide 28s linear infinite;
+        font-size: 36px;
+    }
+
+    @@keyframes deliverySlide {
+        0% {
+            left: -60px;
+            opacity: 0;
+            transform: translateY(0) scaleX(-1);
+        }
+        10% {
+            opacity: 0.15;
+        }
+        50% {
+            transform: translateY(-20px) scaleX(-1);
+        }
+        90% {
+            opacity: 0.15;
+        }
+        100% {
+            left: calc(100% + 60px);
+            opacity: 0;
+            transform: translateY(0) scaleX(-1);
+        }
+    }
+
+    /* Shopping cart */
+    .cart-1 {
+        top: 50%;
+        right: -60px;
+        animation: cartMove 32s linear infinite;
+        font-size: 35px;
+    }
+
+    @@keyframes cartMove {
+        0% {
+            right: -60px;
+            opacity: 0;
+        }
+        10% {
+            opacity: 0.15;
+        }
+        90% {
+            opacity: 0.15;
+        }
+        100% {
+            right: calc(100% + 60px);
+            opacity: 0;
+        }
+    }
+
+    /* Fast delivery truck */
+    .delivery-1 {
+        bottom: 30%;
+        left: -80px;
+        animation: fastDelivery 18s linear infinite;
+        font-size: 38px;
+        transform: scaleX(-1);
+    }
+
+    @@keyframes fastDelivery {
+        0% {
+            left: -80px;
+            opacity: 0;
+        }
+        5% {
+            opacity: 0.2;
+        }
+        95% {
+            opacity: 0.2;
+        }
+        100% {
+            left: calc(100% + 80px);
+            opacity: 0;
+        }
+    }
+
+    /* Warehouse icon */
+    .warehouse-1 {
+        bottom: 10%;
+        right: 8%;
+        animation: warehousePulse 8s ease-in-out infinite;
+        font-size: 45px;
+    }
+
+    @@keyframes warehousePulse {
+        0%, 100% {
+            transform: scale(1);
+            opacity: 0.1;
+        }
+        50% {
+            transform: scale(1.1);
+            opacity: 0.18;
+        }
     }
 
     .login-card {
-        background: var(--apple-bg-secondary);
-        border: 1px solid var(--apple-border);
-        border-radius: 20px;
-        box-shadow: var(--apple-shadow-lg);
+        background: rgba(28, 28, 30, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 100px rgba(10, 132, 255, 0.1);
         width: 100%;
         max-width: 450px;
-        padding: 40px;
-        animation: slideIn 0.3s ease;
+        padding: 45px;
         position: relative;
-        z-index: 1;
-        backdrop-filter: blur(20px);
+        z-index: 10;
+        backdrop-filter: blur(40px) saturate(180%);
+        animation: slideInScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transform-origin: center;
     }
 
-    @@keyframes slideIn {
+    .login-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 24px;
+        padding: 1px;
+        background: linear-gradient(135deg, rgba(10, 132, 255, 0.3), rgba(52, 199, 89, 0.2));
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+        animation: borderGlow 3s ease-in-out infinite;
+    }
+
+    @@keyframes slideInScale {
+        0% {
+            opacity: 0;
+            transform: translateY(30px) scale(0.9);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @@keyframes borderGlow {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 35px;
+        animation: fadeInDown 0.8s ease 0.2s both;
+    }
+
+    .login-header h2 {
+        margin: 0 0 10px 0;
+        color: #ffffff;
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .login-header p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 14px;
+    }
+
+    @@keyframes fadeInDown {
         from {
             opacity: 0;
-            transform: translateY(-20px);
+            transform: translateY(-10px);
         }
         to {
             opacity: 1;
@@ -114,132 +656,345 @@
         }
     }
 
-    .login-header {
-        text-align: center;
-        margin-bottom: 30px;
-    }
-
-    .login-header h2 {
-        margin: 0 0 10px 0;
-        color: var(--apple-text-primary);
-        font-size: 28px;
-        font-weight: 700;
-        letter-spacing: -0.5px;
-    }
-
-    .login-header p {
-        margin: 0;
-        color: var(--apple-text-secondary);
-        font-size: 14px;
-    }
-
     .error-alert {
         background: rgba(255, 69, 58, 0.15);
-        color: var(--apple-red);
+        color: #ff453a;
         padding: 12px 16px;
-        border-radius: 10px;
+        border-radius: 12px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 69, 58, 0.3);
         font-size: 14px;
         font-weight: 500;
+        animation: shake 0.4s ease;
+    }
+
+    @@keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
     }
 
     .form-group {
-        margin-bottom: 20px;
+        margin-bottom: 24px;
+        animation: fadeInUp 0.6s ease both;
+    }
+
+    .form-group:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .form-group:nth-child(3) {
+        animation-delay: 0.2s;
+    }
+
+    .form-group:nth-child(4) {
+        animation-delay: 0.3s;
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .form-group label {
         display: block;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         font-weight: 600;
-        color: var(--apple-text-primary);
+        color: rgba(255, 255, 255, 0.9);
         font-size: 14px;
+        transition: color 0.3s ease;
+    }
+
+    .input-wrapper {
+        position: relative;
     }
 
     .form-input {
         width: 100%;
-        padding: 12px 16px;
-        border: 1px solid var(--apple-border);
-        border-radius: 10px;
+        padding: 14px 18px;
+        border: 1.5px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
         font-size: 16px;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-sizing: border-box;
-        background-color: var(--apple-bg-tertiary);
-        color: var(--apple-text-primary);
+        background-color: rgba(255, 255, 255, 0.05);
+        color: #ffffff;
+        position: relative;
+        z-index: 1;
+    }
+
+    .form-input::placeholder {
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    .input-border {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #0a84ff, #34c759);
+        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 0 0 12px 12px;
     }
 
     .form-input:focus {
         outline: none;
-        border-color: var(--apple-blue);
-        background-color: var(--apple-bg-elevated);
-        box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+        border-color: rgba(10, 132, 255, 0.5);
+        background-color: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.1), 0 8px 16px rgba(0, 0, 0, 0.2);
+        transform: translateY(-2px);
+    }
+
+    .form-input:focus + .input-border {
+        width: 100%;
     }
 
     .checkbox-group {
-        margin-bottom: 24px;
+        margin-bottom: 28px;
     }
 
     .checkbox-label {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         cursor: pointer;
         font-size: 14px;
-        color: var(--apple-text-secondary);
+        color: rgba(255, 255, 255, 0.7);
+        transition: color 0.3s ease;
+    }
+
+    .checkbox-label:hover {
+        color: rgba(255, 255, 255, 0.9);
     }
 
     .checkbox-label input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
         cursor: pointer;
-        accent-color: var(--apple-blue);
+        accent-color: #0a84ff;
+        transition: transform 0.2s ease;
+    }
+
+    .checkbox-label input[type="checkbox"]:hover {
+        transform: scale(1.1);
     }
 
     .btn-login {
         width: 100%;
-        padding: 14px;
-        background: var(--apple-gradient-blue);
+        padding: 16px;
+        background: linear-gradient(135deg, #0a84ff 0%, #0066cc 100%);
         color: white;
         border: none;
-        border-radius: 10px;
+        border-radius: 12px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: var(--apple-shadow-md);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 16px rgba(10, 132, 255, 0.4);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        animation: fadeInUp 0.6s ease 0.4s both;
+    }
+
+    .btn-login::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s ease, height 0.6s ease;
+    }
+
+    .btn-login:hover:not(:disabled)::before {
+        width: 300px;
+        height: 300px;
     }
 
     .btn-login:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: var(--apple-shadow-lg);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(10, 132, 255, 0.6);
     }
 
     .btn-login:active:not(:disabled) {
-        transform: translateY(0);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
     }
 
     .btn-login:disabled {
-        opacity: 0.5;
+        opacity: 0.7;
         cursor: not-allowed;
     }
 
+    .btn-arrow {
+        transition: transform 0.3s ease;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .btn-login:hover:not(:disabled) .btn-arrow {
+        transform: translateX(4px);
+    }
+
+    .loading-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
     .validation-message {
-        color: var(--apple-red);
+        color: #ff453a;
         font-size: 12px;
-        margin-top: 4px;
+        margin-top: 6px;
         display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
 
     @@media (max-width: 480px) {
         .login-card {
-            padding: 30px 20px;
+            padding: 35px 25px;
         }
 
         .login-header h2 {
-            font-size: 24px;
+            font-size: 26px;
+        }
+
+        .particle, .theme-icon, .interactive-character {
+            display: none;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .character-face {
+            font-size: 200px;
+        }
+
+        .character-accessory {
+            font-size: 60px;
+        }
+
+        .magnifying-glass, .handshake {
+            font-size: 70px;
         }
     }
 </style>
+
+<script>
+    // Анимации через чистый JavaScript (работает без InteractiveServer)
+    document.addEventListener('DOMContentLoaded', function() {
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const character = document.querySelector('.interactive-character');
+        const magnifyingGlass = document.querySelector('.magnifying-glass');
+        const handLeft = document.querySelector('.hand-left');
+        const handRight = document.querySelector('.hand-right');
+        const pistol = document.querySelector('.pistol');
+        const handshake = document.querySelector('.handshake');
+        const form = document.querySelector('form');
+        const errorAlert = document.querySelector('.error-alert');
+
+        let isTypingEmail = false;
+        let isTypingPassword = false;
+        let isPasswordIncorrect = false;
+        let isLoginSuccess = false;
+
+        function updateCharacter() {
+            // Скрываем все аксессуары
+            if (magnifyingGlass) magnifyingGlass.style.display = 'none';
+            if (handLeft) handLeft.style.display = 'none';
+            if (handRight) handRight.style.display = 'none';
+            if (pistol) pistol.style.display = 'none';
+            if (handshake) handshake.style.display = 'none';
+
+            // Персонаж приближается при вводе
+            if (character) {
+                if (isTypingEmail || isTypingPassword) {
+                    character.classList.add('character-closer');
+                } else {
+                    character.classList.remove('character-closer');
+                }
+            }
+
+            // Показываем нужный аксессуар
+            if (isLoginSuccess && handshake) {
+                handshake.style.display = 'block';
+            } else if (isPasswordIncorrect && pistol) {
+                pistol.style.display = 'block';
+            } else if (isTypingPassword && handLeft && handRight) {
+                handLeft.style.display = 'block';
+                handRight.style.display = 'block';
+            } else if (isTypingEmail && !isTypingPassword && magnifyingGlass) {
+                magnifyingGlass.style.display = 'block';
+            }
+        }
+
+        // Отслеживаем ввод email
+        if (emailInput) {
+            emailInput.addEventListener('input', function() {
+                isTypingEmail = this.value.length > 0;
+                isPasswordIncorrect = false;
+                isLoginSuccess = false;
+                updateCharacter();
+            });
+        }
+
+        // Отслеживаем ввод пароля
+        if (passwordInput) {
+            passwordInput.addEventListener('input', function() {
+                isTypingPassword = this.value.length > 0;
+                isPasswordIncorrect = false;
+                isLoginSuccess = false;
+                updateCharacter();
+            });
+        }
+
+        // Отслеживаем появление ошибки
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes.length > 0) {
+                    const errorAlert = document.querySelector('.error-alert');
+                    if (errorAlert && errorAlert.textContent.includes('Неверный')) {
+                        isPasswordIncorrect = true;
+                        isLoginSuccess = false;
+                        updateCharacter();
+                    }
+                }
+            });
+        });
+
+        // Наблюдаем за изменениями в DOM
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Инициализируем состояние
+        updateCharacter();
+    });
+</script>
 
 @code {
     [SupplyParameterFromForm]
@@ -248,9 +1003,43 @@
     private string? errorMessage;
     private bool isLoading = false;
 
+    // Interactive character states
+    private bool isTypingEmail = false;
+    private bool isTypingPassword = false;
+    private bool isPasswordIncorrect = false;
+    private bool isLoginSuccess = false;
+    private bool shouldNavigateToHome = false;
+
     protected override void OnInitialized()
     {
         loginModel ??= new LoginModel();
+    }
+
+    private void OnEmailInput(ChangeEventArgs e)
+    {
+        if (loginModel != null)
+        {
+            loginModel.Email = e.Value?.ToString() ?? string.Empty;
+            isTypingEmail = !string.IsNullOrEmpty(loginModel.Email);
+            isTypingPassword = false; // Сбрасываем состояние пароля
+            isPasswordIncorrect = false;
+            isLoginSuccess = false;
+            Console.WriteLine($"Email input: isTypingEmail={isTypingEmail}, value='{loginModel.Email}'");
+            StateHasChanged();
+        }
+    }
+
+    private void OnPasswordInput(ChangeEventArgs e)
+    {
+        if (loginModel != null)
+        {
+            loginModel.Password = e.Value?.ToString() ?? string.Empty;
+            isTypingPassword = !string.IsNullOrEmpty(loginModel.Password);
+            isPasswordIncorrect = false;
+            isLoginSuccess = false;
+            Console.WriteLine($"Password input: isTypingPassword={isTypingPassword}, value length={loginModel.Password.Length}");
+            StateHasChanged();
+        }
     }
 
     public class LoginModel
@@ -322,10 +1111,14 @@
             else if (result.IsLockedOut)
             {
                 errorMessage = "Аккаунт заблокирован. Попробуйте позже.";
+                isPasswordIncorrect = true;
+                isLoginSuccess = false;
             }
             else
             {
                 errorMessage = "Неверный email или пароль.";
+                isPasswordIncorrect = true;
+                isLoginSuccess = false;
             }
         }
         catch (Exception ex)
